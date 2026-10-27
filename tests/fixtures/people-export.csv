@@ -1,0 +1,9 @@
+Full Name,Email Address,Job Title,Company,Role,Notes,Synthetic provenance
+Finley Example,,Director of Infrastructure,Customer,IT Leader,"Toy note, with a comma",SYNTHETIC ONLY - independently invented toy data
+Rowan Example,rowan@example.com,VP Platform,Customer,Executive,,SYNTHETIC ONLY
+Dana Example,not-an-address,Architect,Customer,Architect,,SYNTHETIC ONLY
+Rowan Example,rowan@example.com,VP Platform,Customer,Executive,,SYNTHETIC ONLY
+,orphan@example.com,Unnamed,Customer,Other,,SYNTHETIC ONLY
+Sasha Example,sasha@example.com,Category Manager,Partner,Sourcing,"Toy note
+second test line",SYNTHETIC ONLY
+Quinn Example,quinn@example.com,Head of Toy Things,Customer,Wrangler,,SYNTHETIC ONLY

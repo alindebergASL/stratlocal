@@ -1,0 +1,18 @@
+node_modules
+.next
+data
+.git
+.env
+.env.local
+.env.*.local
+deploy/.env
+.scratch
+e2e
+# tests/ is deliberately NOT excluded: Next's file tracing pulls
+# tests/fixtures/agent-report.html into the standalone output (lib/ai/fake.ts
+# names it), and excluding it from the build context only invites a tracing
+# surprise for no saving worth having.
+
+**/.env
+**/bootstrap-password.txt
+local-backups

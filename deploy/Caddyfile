@@ -1,0 +1,49 @@
+# The certificate, and the security headers.
+#
+# next.config.ts has said "security headers live in deploy/Caddyfile" since
+# Phase 4 — and this file did not exist, so they lived nowhere. Keeping them
+# beside the proxy config is deliberate: it is the thing in front of every
+# response, including the ones Next does not generate.
+{$APP_HOSTNAME} {
+	encode zstd gzip
+
+	# Bigger than the app's own 5 MB upload cap, so an oversized report is
+	# refused by the app with a sentence rather than by the proxy with a 413.
+	request_body {
+		max_size 8MB
+	}
+
+	header {
+		# Two years, subdomains included. No preload: that list is hard to
+		# leave, and this is one hostname for two people.
+		Strict-Transport-Security "max-age=63072000; includeSubDomains"
+		# unsafe-inline is required by Next's inlined bootstrap and by the
+		# styles next/font injects. Everything else is same-origin only: no
+		# third-party script, no frame, no form posting elsewhere.
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'self'; object-src 'none'"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		# Customer names. Not something a crawler should ever hold, even
+		# behind a login.
+		X-Robots-Tag "noindex, nofollow, noarchive"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+		-Server
+		-X-Powered-By
+	}
+
+	# The scheduler's door is for the loop inside the box only. It also needs
+	# a secret, but there is no reason for the outside to reach it at all.
+	respond /api/internal/* 404
+
+	reverse_proxy web:3000 {
+		# Overwrite, do not append.
+		#
+		# Caddy's default is to append the socket address to whatever
+		# X-Forwarded-For the client sent, so the *first* entry is the
+		# client's own — and the app reads [0] to key its login throttle.
+		# Rotating the header on each request therefore bypassed the
+		# enumeration throttle completely, which is the whole reason that
+		# throttle exists. This makes the header say who actually connected.
+		header_up X-Forwarded-For {remote_host}
+	}
+}

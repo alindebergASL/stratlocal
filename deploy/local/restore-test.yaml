@@ -1,0 +1,29 @@
+name: strategylocal-restore
+services:
+  app:
+    image: strategylocal-app
+    ports: ["127.0.0.1:3001:3000"]
+    environment:
+      STRATEGY_LOCAL_ONLY: "1"
+      DB_PATH: /app/data/strategy.sqlite
+      NEXT_TELEMETRY_DISABLED: "1"
+    secrets: [bootstrap_password]
+    volumes: [restored:/app/data]
+    networks: [offline]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=256m
+      - /app/.next/cache:rw,nosuid,nodev,uid=10001,gid=10001,size=256m
+    mem_limit: 3500m
+secrets:
+  bootstrap_password:
+    file: ./bootstrap-password.txt
+volumes:
+  restored:
+    external: true
+    name: strategylocal_restore_test
+networks:
+  offline:
+    internal: true

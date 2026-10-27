@@ -1,0 +1,25 @@
+import { afterEach, expect, it, vi } from "vitest";
+const hooks = vi.hoisted(() => ({ effect: null as null | (() => void | (() => void)), deps: [] as unknown[] }));
+vi.mock("react", () => ({ useEffect: (effect: () => void | (() => void), deps: unknown[]) => { hooks.effect = effect; hooks.deps = deps; } }));
+vi.mock("next/navigation", () => ({ usePathname: () => "/accounts/synthetic/research" }));
+import { CurrentTabIntoView } from "@/components/CurrentTabIntoView";
+afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+it("scrolls the inner list and rechecks resizing without moving the page", () => {
+  const current = { getBoundingClientRect: () => ({ left: 340, right: 420 }) };
+  const list = { scrollLeft: 0, clientWidth: 250, querySelector: () => current, getBoundingClientRect: () => ({ left: 16, right: 266 }) };
+  const nav = { scrollLeft: 0, clientWidth: 320, querySelector: (s: string) => s === "ul" ? list : current };
+  const resize = new Map<string, () => void>();
+  vi.stubGlobal("document", { querySelector: () => nav });
+  vi.stubGlobal("window", { addEventListener: (name: string, fn: () => void) => resize.set(name, fn), removeEventListener: (name: string) => resize.delete(name) });
+  CurrentTabIntoView();
+  expect(hooks.deps).toEqual(["/accounts/synthetic/research"]);
+  const cleanup = hooks.effect?.();
+  expect(list.scrollLeft).toBe(154);
+  expect(nav.scrollLeft).toBe(0);
+  expect(resize.has("resize")).toBe(true);
+  list.scrollLeft = 0; resize.get("resize")?.(); expect(list.scrollLeft).toBe(154);
+  current.getBoundingClientRect = () => ({ left: -10, right: 70 });
+  list.scrollLeft = 100; resize.get("resize")?.(); expect(list.scrollLeft).toBe(74);
+  if (typeof cleanup === "function") cleanup();
+  expect(resize.size).toBe(0);
+});

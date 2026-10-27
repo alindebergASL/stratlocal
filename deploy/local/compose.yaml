@@ -1,0 +1,56 @@
+name: strategylocal
+services:
+  app:
+    image: strategylocal-app
+    build:
+      context: ../..
+      dockerfile: deploy/local/Dockerfile
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      STRATEGY_LOCAL_ONLY: "1"
+      NEXT_TELEMETRY_DISABLED: "1"
+      AWS_EC2_METADATA_DISABLED: "true"
+      DB_PATH: /app/data/strategy.sqlite
+      USER1_EMAIL: ${USER1_EMAIL:?Set USER1_EMAIL in deploy/local/.env}
+      USER1_NAME: ${USER1_NAME:-Local User}
+    secrets:
+      - bootstrap_password
+    volumes:
+      - local_data:/app/data
+    networks: [offline]
+    mem_limit: 3500m
+    cpus: 4
+    pids_limit: 256
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=256m
+      - /app/.next/cache:rw,nosuid,nodev,uid=10001,gid=10001,size=256m
+    restart: unless-stopped
+  worker:
+    image: strategylocal-app
+    entrypoint: ["node", "/app/worker.mjs"]
+    depends_on:
+      app:
+        condition: service_healthy
+    volumes:
+      - local_data:/app/data
+    network_mode: none
+    mem_limit: 512m
+    cpus: 1
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    read_only: true
+    restart: unless-stopped
+    healthcheck:
+      disable: true
+secrets:
+  bootstrap_password:
+    file: ./bootstrap-password.txt
+networks:
+  offline:
+    internal: true
+volumes:
+  local_data:

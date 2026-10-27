@@ -1,0 +1,366 @@
+@import "tailwindcss";
+
+/*
+ * The whole theme. Three of the old five tokens were Tailwind slate values
+ * under new names, which is why the code drifted between `text-ink-muted` and
+ * `text-slate-600` with no rule, and why the most-used colour in the app —
+ * the body colour — was a raw hex nobody could reference. Everything a screen
+ * needs is a token now, and semantic colours come in threes (text, soft
+ * background, border) so a callout cannot be half-invented at the call site.
+ */
+@theme {
+  --font-sans: var(--font-inter, system-ui), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-display: var(--font-archivo, system-ui), var(--font-inter, system-ui), ui-sans-serif, system-ui, sans-serif;
+
+  /* Ink: text and dark grounds. Graphite, no hue cast.
+     `ink-faint` was #9aa0b4, which is 2.30:1 on the sunk ground it was most
+     often printed on — a colour for text nobody has to read, used for source
+     dates, evidence disclosures and the "before" side of a diff. Every ink
+     here clears 4.5:1 on all three grounds; `tests/contrastTokens.test.ts`
+     fails if one stops doing so. */
+  --color-ink-strong: #1b1b1f;
+  --color-ink: #2c2c31;
+  --color-ink-muted: #55555a;
+  --color-ink-faint: #636367;
+  --color-ink-invert: #faf8f4;
+
+  /* Ground: warm neutral paper rather than a cool violet-grey. */
+  --color-paper: #f7f5f1;
+  --color-surface: #ffffff;
+  --color-surface-sunk: #f1eee8;
+  --color-line: #e9e5de;
+  --color-line-strong: #c3bdb1;
+  /* Interactive outlines, not decorative dividers: >=3:1 on every ground. */
+  --color-control-line: #827b70;
+
+  /* Accent: deep teal. Reads as ink's cooler cousin against warm paper and
+     carries a link at body size on all three grounds. */
+  --color-accent: #0f5f6e;
+  --color-accent-hover: #0b4956;
+  --color-accent-soft: #e6f1f2;
+  --color-accent-line: #a9cdd4;
+
+  /* Semantic, each a text colour, a soft ground and a border. Unchanged in
+     meaning: orange is a gap or a caution, red is an error, green is a
+     confirmed action, and nothing else borrows them. */
+  --color-positive: #04624a;
+  --color-positive-soft: #e7f4ee;
+  --color-positive-line: #a5d7c2;
+  --color-warning: #8a4708;
+  --color-warning-soft: #fbf1e3;
+  --color-warning-line: #e9c795;
+  --color-danger: #a81f1f;
+  --color-danger-soft: #fbeceb;
+  --color-danger-line: #eeb3b1;
+
+  /* Type. The old app was 96% 12-14px, so size did no hierarchical work. */
+  --text-micro: 0.8125rem;
+  --text-micro--line-height: 1.125rem;
+  --text-label: 0.9375rem;
+  --text-label--line-height: 1.375rem;
+  --text-body: 1rem;
+  --text-body--line-height: 1.5rem;
+  --text-lead: 1.125rem;
+  --text-lead--line-height: 1.75rem;
+  --text-heading: 1.25rem;
+  --text-heading--line-height: 1.625rem;
+  --text-title: 1.5rem;
+  --text-title--line-height: 1.875rem;
+  --text-display: 2.125rem;
+  --text-display--line-height: 1.1;
+  --text-mega: 2.75rem;
+  --text-mega--line-height: 1.05;
+
+  --radius-xs: 0.25rem;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
+
+  --shadow-card: 0 1px 2px 0 rgb(38 32 24 / 0.04), 0 1px 3px 0 rgb(38 32 24 / 0.06);
+  --shadow-raised: 0 4px 12px -2px rgb(38 32 24 / 0.1), 0 2px 4px -2px rgb(38 32 24 / 0.06);
+  --shadow-pop: 0 16px 40px -8px rgb(38 32 24 / 0.24);
+}
+
+/* Explicit component hooks only: nested evidence, editors and native details
+   do not inherit panel chrome.
+
+   A section's heading is a label with a hairline under it, not a shaded bar.
+   The bar — a sunk ground, a 3px rule down the left and a border under it —
+   made every heading as loud as the content below, and with eight sections on
+   an account page the page read as eight banners. Hierarchy now comes from
+   type size and space, which is what the headings already had. */
+.section-heading {
+  padding: 0 0 0.5rem;
+  border-bottom: 1px solid var(--color-line);
+  background: transparent;
+}
+.disclosure-section > summary { min-height: 2.75rem; }
+.research-topic > .research-topic-heading {
+  margin: -0.875rem -0.875rem 0;
+  padding: 0.625rem 0.875rem;
+  border-bottom: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  background: var(--color-surface-sunk);
+}
+
+/* An empty section is a heading, a count of nothing and a way to add the
+   first one. It was being given the same panel as fifteen rows of deals, so a
+   new account read as a page of work that does not exist. Opt-in, on the
+   section that knows it has nothing in it: populated tables keep their room.
+   Nothing is hidden — the heading, the count, the add action and the anchor
+   all stay. */
+.section-empty {
+  margin-bottom: 0.75rem;
+  padding: 0.75rem 1rem;
+}
+.section-empty > div:first-child {
+  margin-bottom: 0.375rem;
+  padding-bottom: 0.375rem;
+}
+.section-empty .empty-body {
+  padding-top: 0.25rem;
+  padding-bottom: 0;
+}
+
+html {
+  color-scheme: light;
+  /* Anchors land below the sticky header rather than under it. */
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
+  /* Findings quote URLs, deals have long unbroken names, and a customer's
+     legal entity can be one enormous word. Without this a single token wider
+     than the column pushes the whole page sideways on a phone. */
+  overflow-wrap: break-word;
+}
+
+/* Nothing in the app had a focus style at all. This is the floor; the
+   primitives in components/ui.tsx set their own on top. */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+
+/* Every jump target clears the sticky header. */
+[id] {
+  scroll-margin-top: 5rem;
+}
+
+/* Native top-layer modal escapes the header's backdrop-filter containing block. */
+.command-palette {
+  margin: 12dvh auto 0;
+  width: min(32rem, calc(100% - 2rem));
+  max-height: 80dvh;
+  padding: 0;
+}
+.command-palette::backdrop { background: rgb(27 27 31 / 0.3); }
+.command-palette[open] { display: flex; flex-direction: column; }
+.command-palette input:focus { outline: 2px solid var(--color-accent); outline-offset: -3px; }
+html:has(.command-palette[open]) { overflow: hidden; }
+.notes-editor { font-size: 1rem; line-height: 1.625; }
+@media (max-width: 639px) {
+  [id] { scroll-margin-top: 1rem; }
+}
+/* From lg the header is a sidebar beside the page, so nothing sits above a
+   jump target. */
+@media (min-width: 1024px) {
+  [id] { scroll-margin-top: 1.5rem; }
+}
+
+/* Motion is a nicety and never a requirement. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@keyframes settle {
+  from {
+    background-color: var(--color-positive-soft);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(0.25rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.animate-settle {
+  animation: settle 1.2s ease-out;
+}
+
+.animate-rise {
+  animation: rise 0.18s ease-out;
+}
+
+/* A card arriving: a little lift and scale, so moving to the next one in a
+   queue reads as progress rather than a repaint. */
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(0.75rem) scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+.animate-card-in { animation: card-in 0.32s cubic-bezier(0.2, 0.8, 0.2, 1); }
+
+/* The check at the end of a queue draws itself once. */
+@keyframes draw { to { stroke-dashoffset: 0; } }
+.draw-check path { stroke-dasharray: 40; stroke-dashoffset: 40; animation: draw 0.5s 0.15s ease-out forwards; }
+
+/* Today's Next-up card: the one tinted surface on the page, lit from the
+   corner so it reads as the thing to look at first. Tokens only. */
+.today-hero {
+  background:
+    radial-gradient(120% 140% at 100% 0%, color-mix(in oklab, var(--color-accent) 16%, transparent) 0%, transparent 55%),
+    linear-gradient(140deg, var(--color-accent-soft) 0%, var(--color-surface) 100%);
+}
+
+/* Icons beside the main links appear only in the sidebar; on a phone the
+   row of words is the whole navigation. */
+.nav-icon { display: none; }
+@media (min-width: 1024px) {
+  .nav-icon { display: block; }
+}
+
+/* Printing.
+ *
+ * The shared-screen case is an account team looking at this over a call, and
+ * the "send it to them" case is the browser's own Save as PDF. What comes out
+ * of that should be a document, not a screenshot of an app: no navigation, no
+ * controls, black on white, and no card broken across a page boundary.
+ *
+ * Only /accounts/[id]/summary sets `data-print="document"`; every other page
+ * prints as it looks, which is fine because nobody prints them. */
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+  [data-one-page] main {
+    font-size: 10pt;
+    line-height: 1.35;
+  }
+  [data-one-page] h1 {
+    font-size: 23pt;
+  }
+  [data-one-page] section {
+    margin-bottom: 10pt;
+  }
+  [data-one-page] .text-micro {
+    font-size: 8pt;
+  }
+  [data-one-page] .text-label {
+    font-size: 10pt;
+  }
+  [data-one-page] a::after {
+    content: none !important;
+  }
+  [data-print="document"] {
+    --color-paper: #ffffff;
+    --color-surface: #ffffff;
+    --color-surface-sunk: #ffffff;
+    --color-ink: #000000;
+    --color-ink-strong: #000000;
+    --color-ink-muted: #333333;
+    --color-ink-faint: #555555;
+    --color-accent: #000000;
+    --color-line: #bbbbbb;
+    --color-line-strong: #888888;
+  }
+
+  /* The app's own chrome is a direct child; the page's title block is a
+     <header> too, inside <main>, and hiding that took the account name off
+     the printed page. */
+  [data-print="document"] > header,
+  [data-print="document"] nav,
+  [data-print="document"] button,
+  [data-print="document"] form,
+  [data-print="document"] [data-print-hide] {
+    display: none !important;
+  }
+
+  /* The body paints the canvas, so the page ground has to be cleared there
+     as well as on the document itself. */
+  body:has([data-print="document"]) {
+    background: #ffffff;
+  }
+
+  [data-print="document"] {
+    background: #ffffff;
+    color: var(--color-ink);
+  }
+
+  [data-print="document"] main {
+    max-width: none;
+    padding: 0;
+  }
+
+  /* A card split across two sheets is the thing that makes a printed page
+     look accidental. */
+  [data-print="document"] section,
+  [data-print="document"] li,
+  [data-print="document"] article {
+    break-inside: avoid;
+  }
+
+  [data-print="document"] section {
+    border: 0;
+    box-shadow: none;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  /* A link's text is on the page; its URL is not, and a printed footnote of
+     hrefs is noise. Research sources are the exception and print their URL,
+     because a claim without its source is the one thing this page must not
+     become. */
+  [data-print="document"] a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  [data-print="document"] a[data-print-url]::after {
+    content: " (" attr(href) ")";
+    font-size: 0.75em;
+    color: #555555;
+    word-break: break-all;
+  }
+
+  [data-print="document"] .animate-settle,
+  [data-print="document"] .animate-rise {
+    animation: none;
+  }
+
+  @page {
+    margin: 16mm;
+  }
+}
+
+.meeting-row-actions button { min-height: 2.75rem; }
+@media (max-width: 639px) {
+  .home-meeting-row .home-meeting-title { flex-basis: 100%; order: -1; }
+  .home-meeting-row > a { display: inline-flex; align-items: center; min-height: 2.75rem; }
+}

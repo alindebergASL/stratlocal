@@ -1,0 +1,80 @@
+# The checks, run by something other than memory.
+#
+# There are 285 tests and eight browser flows, and until now every one of them
+# ran only when a person typed the command. That is fine for the round you are
+# in and useless for the round after: the things this repository keeps finding
+# are regressions from its own previous phase.
+#
+# Nothing here needs a secret. The tests set DB_PATH=":memory:" themselves, and
+# the e2e runner seeds its own two users, gives each flow a throwaway database
+# and forces AI_FAKE=1 — so no provider is ever called and no key is needed.
+# That is deliberate and worth keeping: this repository is public, which makes
+# these logs public, so there is nothing here to leak and no artifact upload to
+# leak it through.
+name: checks
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+# A second push supersedes the first. Two people share this and a queue of
+# stale runs on an old commit tells nobody anything.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  privacy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+      - run: node scripts/privacy-check.mjs
+      - run: node scripts/privacy-check.mjs --event
+
+  checks:
+    needs: privacy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      # Not `--omit=dev`: typescript, vitest and playwright are all
+      # devDependencies, and better-sqlite3 is native — the runner has the
+      # build tools if its prebuilt binary does not match.
+      - run: npm ci
+      - run: npm run privacy
+      - run: node scripts/privacy-check.mjs --event
+      - run: npm run typecheck
+      - run: npm test
+      # next/font/google downloads Archivo and Inter at build time and
+      # self-hosts them, so this step needs egress to fonts.googleapis.com.
+      # GitHub runners have it; a self-hosted or airgapped one would fail here
+      # and the failure would not obviously be about fonts.
+      - run: npm run build
+
+  e2e:
+    needs: privacy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      # The one thing `npm ci` cannot bring: playwright is a devDependency but
+      # its browser is a 150 MB download that does not belong in a lockfile.
+      # --with-deps because a bare ubuntu runner is missing the shared
+      # libraries Chromium needs, and the failure reads as a crash on launch.
+      - run: npx playwright install --with-deps chromium
+      # `npm run e2e` builds first, which is the same build the other job just
+      # did — but the two jobs run in parallel on separate runners, so sharing
+      # it would mean an artifact round-trip that costs more than the build.
+      - run: npm run e2e

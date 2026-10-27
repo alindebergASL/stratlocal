@@ -1,0 +1,9 @@
+Opportunity ID,Opportunity Name,Sales Stage,Stage Name,Expected Close,Amount,Status,Owner,Next Step,Competitor,Partner,Created Date,Synthetic provenance
+SYN-DEAL-001,SyntheticOrchard_EHR-Refresh,4,Tech Validation,2026-12-01,"$1,200",Open,Gray Example,"Try option A, then option B",Synthetic Rival A,Synthetic Partner C,2026-01-01,SYNTHETIC ONLY - independently invented toy data
+SYN-EXTRA-001,SyntheticOrchard_Campus-Wireless,2,Qualification,11 Feb 2027,2k,Open,Gray Example,Run toy workshop,,Synthetic Partner C,2026-01-02,SYNTHETIC ONLY
+SYN-EXTRA-002,"SyntheticOrchard_Storage, phase two",5,Negotiation,2026-12-03,0.003M,Closed Won,Avery Example,"Toy approval
+second test line",Synthetic Rival B,,2026-01-03,SYNTHETIC ONLY
+,SyntheticOrchard_Analytics-Pilot,1,Prospecting,2027-03-01,400,Open,Avery Example,Choose sandbox option,,,2026-01-04,SYNTHETIC ONLY
+SYN-EXTRA-003,SyntheticOrchard_Broken-Date,3,Proposal,03/04/2026,500,Open,Gray Example,,,,2026-01-05,SYNTHETIC ONLY
+SYN-EXTRA-004,,3,Proposal,2026-12-06,600,Open,Gray Example,,,,2026-01-06,SYNTHETIC ONLY
+SYN-DEAL-001,SyntheticOrchard_EHR-Refresh (duplicate line),4,Tech Validation,2026-12-01,1200,Open,Gray Example,,,,2026-01-01,SYNTHETIC ONLY

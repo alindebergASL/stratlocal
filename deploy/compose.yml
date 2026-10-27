@@ -1,0 +1,167 @@
+# One small box: the app, a proxy that gets the certificate, and a backup that
+# runs on a timer. Nothing here is clustered and nothing needs to be — there
+# are two users and one SQLite file.
+#
+#   docker compose -f deploy/compose.yml --env-file deploy/.env up -d --build
+#
+services:
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      args:
+        # Read by Next at build time for serverActions.allowedOrigins.
+        APP_HOSTNAME: ${APP_HOSTNAME}
+    restart: unless-stopped
+    # Never published. The only way in is through the proxy, which is the only
+    # thing holding a certificate.
+    expose:
+      - "3000"
+    environment:
+      APP_HOSTNAME: ${APP_HOSTNAME}
+      DB_PATH: /app/data/strategy.sqlite
+      BACKUP_S3_URI: ${BACKUP_S3_URI:-}
+      USER1_EMAIL: ${USER1_EMAIL}
+      USER1_PASSWORD: ${USER1_PASSWORD}
+      USER1_NAME: ${USER1_NAME}
+      USER2_EMAIL: ${USER2_EMAIL}
+      USER2_PASSWORD: ${USER2_PASSWORD}
+      USER2_NAME: ${USER2_NAME}
+      AWS_REGION: ${AWS_REGION}
+      BEDROCK_MODEL_ID: ${BEDROCK_MODEL_ID}
+      DIRECT_MODEL_ID: ${DIRECT_MODEL_ID:-claude-opus-5-5}
+      AI_PRICE_US_ANTHROPIC_CLAUDE_OPUS_5_5_INPUT: ${AI_PRICE_US_ANTHROPIC_CLAUDE_OPUS_5_5_INPUT:-}
+      AI_PRICE_US_ANTHROPIC_CLAUDE_OPUS_5_5_OUTPUT: ${AI_PRICE_US_ANTHROPIC_CLAUDE_OPUS_5_5_OUTPUT:-}
+      AI_PRICE_US_ANTHROPIC_CLAUDE_OPUS_5_5_CACHE_READ: ${AI_PRICE_US_ANTHROPIC_CLAUDE_OPUS_5_5_CACHE_READ:-}
+      AI_PRICE_US_ANTHROPIC_CLAUDE_OPUS_5_5_CACHE_WRITE: ${AI_PRICE_US_ANTHROPIC_CLAUDE_OPUS_5_5_CACHE_WRITE:-}
+      AI_PRICE_CLAUDE_OPUS_5_5_INPUT: ${AI_PRICE_CLAUDE_OPUS_5_5_INPUT:-}
+      AI_PRICE_CLAUDE_OPUS_5_5_OUTPUT: ${AI_PRICE_CLAUDE_OPUS_5_5_OUTPUT:-}
+      AI_PRICE_CLAUDE_OPUS_5_5_CACHE_READ: ${AI_PRICE_CLAUDE_OPUS_5_5_CACHE_READ:-}
+      AI_PRICE_CLAUDE_OPUS_5_5_CACHE_WRITE: ${AI_PRICE_CLAUDE_OPUS_5_5_CACHE_WRITE:-}
+      # Optional prices for the deployed US Claude profile and direct research.
+      AI_PRICE_US_ANTHROPIC_CLAUDE_OPUS_4_6_V1_INPUT: ${AI_PRICE_US_ANTHROPIC_CLAUDE_OPUS_4_6_V1_INPUT:-}
+      AI_PRICE_US_ANTHROPIC_CLAUDE_OPUS_4_6_V1_OUTPUT: ${AI_PRICE_US_ANTHROPIC_CLAUDE_OPUS_4_6_V1_OUTPUT:-}
+      AI_PRICE_US_ANTHROPIC_CLAUDE_OPUS_4_6_V1_CACHE_READ: ${AI_PRICE_US_ANTHROPIC_CLAUDE_OPUS_4_6_V1_CACHE_READ:-}
+      AI_PRICE_US_ANTHROPIC_CLAUDE_OPUS_4_6_V1_CACHE_WRITE: ${AI_PRICE_US_ANTHROPIC_CLAUDE_OPUS_4_6_V1_CACHE_WRITE:-}
+      AI_PRICE_CLAUDE_OPUS_5_INPUT: ${AI_PRICE_CLAUDE_OPUS_5_INPUT:-}
+      AI_PRICE_CLAUDE_OPUS_5_OUTPUT: ${AI_PRICE_CLAUDE_OPUS_5_OUTPUT:-}
+      AI_PRICE_CLAUDE_OPUS_5_CACHE_READ: ${AI_PRICE_CLAUDE_OPUS_5_CACHE_READ:-}
+      AI_PRICE_CLAUDE_OPUS_5_CACHE_WRITE: ${AI_PRICE_CLAUDE_OPUS_5_CACHE_WRITE:-}
+      AI_PRICE_WEB_SEARCH_PER_1K_USD: ${AI_PRICE_WEB_SEARCH_PER_1K_USD:-}
+      AI_PRICE_WEB_FETCH_PER_1K_USD: ${AI_PRICE_WEB_FETCH_PER_1K_USD:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      AI_DAILY_CAP_CENTS: ${AI_DAILY_CAP_CENTS:-1500}
+      APP_TIMEZONE: ${APP_TIMEZONE:-America/Los_Angeles}
+      FISCAL_YEAR_START_MONTH: ${FISCAL_YEAR_START_MONTH:-8}
+      # Starting values only; the Assistants page changes them after that.
+      AI_MONTHLY_CAP_CENTS: ${AI_MONTHLY_CAP_CENTS:-25000}
+      AI_PEOPLE_SHARE_CENTS: ${AI_PEOPLE_SHARE_CENTS:-10000}
+      SCHEDULER_SECRET: ${SCHEDULER_SECRET:-}
+      INTEGRATIONS_KEY: ${INTEGRATIONS_KEY:-}
+      # Calendars (DECISIONS #42). All optional: a published iCal link needs
+      # none of these. Outlook: an Entra app registration restricted to
+      # Strategy's mailbox. Google: a service account key, JSON or base64.
+      MS_TENANT_ID: ${MS_TENANT_ID:-}
+      MS_CLIENT_ID: ${MS_CLIENT_ID:-}
+      MS_CLIENT_SECRET: ${MS_CLIENT_SECRET:-}
+      GOOGLE_SERVICE_ACCOUNT_JSON: ${GOOGLE_SERVICE_ACCOUNT_JSON:-}
+      SALESFORCE_LOGIN_URL: ${SALESFORCE_LOGIN_URL:-}
+      SALESFORCE_CLIENT_ID: ${SALESFORCE_CLIENT_ID:-}
+      SALESFORCE_CLIENT_SECRET: ${SALESFORCE_CLIENT_SECRET:-}
+      SALESFORCE_MCP_URL: ${SALESFORCE_MCP_URL:-}
+      SALESFORCE_MCP_TOKEN: ${SALESFORCE_MCP_TOKEN:-}
+      INTERNAL_EMAIL_DOMAINS: ${INTERNAL_EMAIL_DOMAINS:-}
+    volumes:
+      # The database, the WAL beside it, and every uploaded report. This is the
+      # only thing on the box worth keeping.
+      - data:/app/data
+
+  proxy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      APP_HOSTNAME: ${APP_HOSTNAME}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+
+  backup:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      args:
+        APP_HOSTNAME: ${APP_HOSTNAME}
+    # Same image, but this service runs a backup loop, not an HTTP server.
+    healthcheck:
+      disable: true
+    restart: unless-stopped
+    # Read-write, not read-only: VACUUM INTO opens the source read-only but
+    # SQLite still needs to be able to see the -wal and -shm files beside it.
+    volumes:
+      - data:/app/data
+    environment:
+      DB_PATH: /app/data/strategy.sqlite
+      BACKUP_S3_URI: ${BACKUP_S3_URI}
+      BACKUP_KEEP: ${BACKUP_KEEP:-14}
+      BACKUP_S3_KMS_KEY: ${BACKUP_S3_KMS_KEY:-}
+      AWS_REGION: ${AWS_REGION}
+      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-86400}
+    # A loop rather than cron: one fewer thing in the image, and the log is
+    # just the container's log.
+    #
+    # The loop is the *command*, not an entrypoint. It was
+    # `entrypoint: ["/bin/sh","-c"]` with the loop as the command, and that
+    # quietly broke the documented on-demand backup: `compose run backup node
+    # /app/scripts/backup.mjs` becomes `sh -c node /app/scripts/backup.mjs`,
+    # where sh takes "node" as the whole command string and the path as $0 —
+    # so it opened a REPL, read EOF, and exited 0 having backed up nothing.
+    # Verified. With the loop here instead, `compose run --rm backup node
+    # /app/scripts/backup.mjs` overrides it and runs the backup.
+    command:
+      - /bin/sh
+      - -c
+      - |
+        while true; do
+          node /app/scripts/backup.mjs || echo "backup failed, will try again"
+          sleep "${BACKUP_INTERVAL_SECONDS:-86400}"
+        done
+
+  # The scheduler (DECISIONS #38): every few minutes, ask the app what is due.
+  # The app decides; this only knocks. It talks to `web` on the inside
+  # network, and the proxy refuses /api/internal/ from outside. Without a
+  # SCHEDULER_SECRET of at least 32 characters it logs why and keeps trying,
+  # and the assistants simply wait for you to press Run now.
+  scheduler:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      args:
+        APP_HOSTNAME: ${APP_HOSTNAME}
+    healthcheck:
+      disable: true
+    restart: unless-stopped
+    environment:
+      SCHEDULER_SECRET: ${SCHEDULER_SECRET:-}
+      SCHEDULER_URL: http://web:3000/api/internal/tick
+      SCHEDULER_INTERVAL_SECONDS: ${SCHEDULER_INTERVAL_SECONDS:-300}
+    command:
+      - /bin/sh
+      - -c
+      - |
+        while true; do
+          node /app/scripts/tick.mjs || true
+          sleep "${SCHEDULER_INTERVAL_SECONDS:-300}"
+        done
+    depends_on:
+      - web
+
+volumes:
+  data:
+  caddy_data:
+  caddy_config:
