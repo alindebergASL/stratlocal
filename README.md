@@ -19,6 +19,12 @@ Production build, TypeScript, real login, queue recovery, and backup/restore che
 
 See [validation details](deploy/local/VALIDATION.md), [pilot overview](START-HERE.md), and [upstream documentation](docs/UPSTREAM-README.md).
 
+## Architecture and integration
+
+- [Review findings and implementation implications](docs/REVIEW-FINDINGS.md)
+- [MyAgent capabilities, evidence ledger and integration design](docs/MYAGENT-INTEGRATION.md)
+- [Local application roadmap and acceptance gates](docs/LOCAL-ROADMAP.md)
+
 ## Source provenance
 
 This project starts from alindebergASL/strategy commit `590acd78141ec0f8ef4599fd4e5e337019a7440b`, with local-foundation changes. It is a source snapshot, not a fork preserving upstream Git history.
