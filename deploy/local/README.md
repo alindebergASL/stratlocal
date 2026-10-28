@@ -22,7 +22,15 @@ docker info
 - If Docker is missing, install [Docker Desktop for Mac](https://docs.docker.com/desktop/setup/install/mac-install/) for the architecture you just checked. Open Docker Desktop and wait for its engine to start, then retry the Docker commands.
 - `docker compose version` must report Compose v2. `docker info` must succeed against **your local Docker Desktop engine**, not a remote Docker context. If unsure which engine is selected, check Docker Desktop and `docker context ls` before continuing.
 
-Internet is needed for the initial image/dependency downloads. Node is included in the app image; **you do not need host Node for the base installation**. The Compose configuration caps the app at 3,500 MiB and the maintenance worker at 512 MiB; build memory needs are not measured. If Docker reports out-of-memory errors, stop and check its resource allocation.
+Internet is needed for the initial image/dependency downloads. Node is included in the app image; **you do not need host Node for the base installation**. Check the engine's CPU count explicitly:
+
+```sh
+docker info --format '{{.NCPU}}'
+```
+
+The app defaults to a 2-CPU limit; the maintenance worker has a 1-CPU limit. These are per-container ceilings, not dedicated CPU reservations. If the engine reports only 1 CPU, set `APP_CPU_LIMIT=1` in `deploy/local/.env`. Any custom `APP_CPU_LIMIT` must not exceed the reported count. The earlier hardcoded 4-CPU app limit prevented container creation on 2-CPU Docker Desktop installations; updating the checkout fixes that default without rebuilding the image.
+
+The Compose configuration caps the app at 3,500 MiB and the maintenance worker at 512 MiB; build memory needs are not measured. If Docker reports out-of-memory errors, stop and check its resource allocation.
 
 ## 2. Get the correct source
 
