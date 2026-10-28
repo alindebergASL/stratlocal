@@ -19,6 +19,8 @@ Production build, TypeScript, real login, queue recovery, and backup/restore che
 
 See [validation details](deploy/local/VALIDATION.md), [pilot overview](START-HERE.md), and [upstream documentation](docs/UPSTREAM-README.md).
 
+See the [import review and roadmap](docs/local-import-roadmap.md) for current identity safeguards, local document-upload behavior, and the territory/engagement import acceptance criteria.
+
 ## Source provenance
 
 This project starts from alindebergASL/strategy commit `590acd78141ec0f8ef4599fd4e5e337019a7440b`, with local-foundation changes. It is a source snapshot, not a fork preserving upstream Git history.

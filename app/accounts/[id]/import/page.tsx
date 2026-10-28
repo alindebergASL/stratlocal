@@ -22,23 +22,19 @@ export default async function ImportPage({ params }: { params: Promise<{ id: str
       <Breadcrumb accountId={id} accountName={account.name} page="Import" />
       <PageHeader title="Import a report" sub="A report from your sales tool, or a document from the customer." />
       <Section title="Upload">
-        {problem ? (
-          <Callout tone="warning">{problem}</Callout>
-        ) : (
-          <>
-            <ImportForm accountId={id} today={todayISO()} />
-            {/* The explanation is worth reading once and not on every import. */}
-            <details className="mt-4 border-t border-line pt-3">
-              <summary className="cursor-pointer text-label text-ink-muted hover:text-ink">What happens to the file</summary>
-              <p className="mt-2 max-w-2xl text-label text-ink-muted">
-                The report is read into structured facts — account details, the seller team, opportunities, install base, plays — and every difference from what
-                this account already holds becomes a proposal for you to accept or reject one at a time. A deal id the report text does not actually contain is
-                dropped before you see it. The original file is kept with the account, and uploading the same file twice brings the first one back rather than
-                creating a second.
-              </p>
-            </details>
-          </>
+        {problem && (
+          <Callout tone="warning">{problem} You can still upload and keep customer documents locally. Report extraction is unavailable.</Callout>
         )}
+        <ImportForm accountId={id} today={todayISO()} reportAvailable={!problem} />
+        <details className="mt-4 border-t border-line pt-3">
+          <summary className="cursor-pointer text-label text-ink-muted hover:text-ink">What happens to the file</summary>
+          <p className="mt-2 max-w-2xl text-label text-ink-muted">
+            Customer documents are kept locally with this account. Uploading one does not start AI or propose account changes.
+            When report extraction is available, account details, team, opportunities, install base and plays become proposals for you to review.
+            Conflicting account names or CRM identifiers stop the import before any proposals are created.
+            The original file is kept; uploading the same file again for the same account and purpose reuses it.
+          </p>
+        </details>
       </Section>
     </Page>
   );

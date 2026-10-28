@@ -13,6 +13,7 @@ import { documentFormat, documentText, DocumentFileError, MIME } from "../docume
 import { jsonExtraction } from "./jsonReport";
 import { extractAgentReport } from "./extract";
 import { diffExtraction } from "./diffExtraction";
+import { assertImportAccountIdentity } from "./accountIdentity";
 
 export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 
@@ -92,9 +93,18 @@ export function startImportRun(doc: DocumentRow, userId: string, asOf?: string |
     // else, JSON included, is read by the model.
     const direct = doc.mime === "application/json" ? jsonExtraction(doc.content_text ?? "", account.name) : null;
     const { extraction, attempts, dropped } = direct ? { ...direct, attempts: 0 } : await extractAgentReport(doc.content_text ?? "", doc.filename, stages);
+    // Re-read after extraction: the account may have changed while the model
+    // was running. Fail the whole import before any proposal can be accepted.
+    const currentAccount = getAccount(doc.account_id);
+    if (!currentAccount) throw new Error("account no longer exists");
+    const otherAccount = extraction.account.crm_id?.trim()
+      ? db().prepare("SELECT name FROM accounts WHERE TRIM(crm_id) = ? AND id != ? LIMIT 1")
+          .get(extraction.account.crm_id.trim(), currentAccount.id) as { name: string } | undefined
+      : undefined;
+    assertImportAccountIdentity(extraction.account, currentAccount, otherAccount?.name);
     // Archived rows are included on purpose; see AccountState in diffExtraction.
     const state = {
-      account,
+      account: currentAccount,
       deals: listDeals(account.id, { includeArchived: true }),
       contacts: listContacts(account.id, { includeArchived: true }),
       plays: listPlays(account.id, { includeArchived: true }),

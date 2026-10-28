@@ -3,6 +3,8 @@ import { requireUser } from "@/lib/auth";
 import { handle } from "@/lib/http";
 import { isRealDay, todayISO } from "@/lib/clock";
 import { getAccount } from "@/lib/queries/accounts";
+import { providerProblem } from "@/lib/ai/client";
+import { ROLES } from "@/lib/ai/models";
 import { BudgetError, MAX_UPLOAD_BYTES, startImportRun, storeCustomerDocument, storeReportDocument, UploadError } from "@/lib/import/run";
 
 export const runtime = "nodejs";
@@ -56,6 +58,10 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
         const doc = await storeCustomerDocument({ accountId: id, filename: file.name || "document.txt", bytes, userId: user.id });
         return NextResponse.json({ documentId: doc.id });
       }
+      // Refuse before storing a report that this deployment cannot extract.
+      // Keeping customer documents above does not require an AI provider.
+      const problem = providerProblem(ROLES.import.provider);
+      if (problem) return NextResponse.json({ error: problem }, { status: 503 });
       const doc = await storeReportDocument({ accountId: id, filename: file.name || "report.html", bytes, userId: user.id });
       const runId = startImportRun(doc, user.id, asOf);
       return NextResponse.json({ runId, documentId: doc.id });

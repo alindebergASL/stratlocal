@@ -10,12 +10,13 @@ import { DOCUMENT_ACCEPT } from "@/lib/documents/accept";
 
 type ImportResult = { batchId: string; proposals: number; dropped: string[]; attempts: number };
 
-export function ImportForm({ accountId, today }: { accountId: string; today: string }) {
+export function ImportForm({ accountId, today, reportAvailable = true }: { accountId: string; today: string; reportAvailable?: boolean }) {
   const { start, state, error, busy } = useAiRun<ImportResult>();
   const fileRef = useRef<HTMLInputElement>(null);
   const asOfRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
-  const [purpose, setPurpose] = useState<"report" | "customer_doc">("report");
+  const [selectedPurpose, setPurpose] = useState<"report" | "customer_doc">("report");
+  const purpose = reportAvailable ? selectedPurpose : "customer_doc";
   const [kept, setKept] = useState<{ ok: boolean; text: string } | null>(null);
   const [keeping, setKeeping] = useState(false);
 
@@ -53,7 +54,7 @@ export function ImportForm({ accountId, today }: { accountId: string; today: str
       <fieldset className="mb-3 flex flex-wrap gap-x-5 gap-y-1 text-label" data-testid="import-purpose">
         <legend className="sr-only">What is this file?</legend>
         <label className="flex min-h-9 items-center gap-2">
-          <input type="radio" name="purpose" value="report" checked={purpose === "report"} onChange={() => setPurpose("report")} className="accent-accent" />
+          <input type="radio" name="purpose" value="report" checked={purpose === "report"} disabled={!reportAvailable} onChange={() => setPurpose("report")} className="accent-accent" />
           <span>
             <span className="font-semibold text-ink">Account report</span> <span className="text-ink-muted">deals, team, install base, plays</span>
           </span>
