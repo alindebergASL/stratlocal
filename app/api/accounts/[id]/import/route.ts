@@ -5,7 +5,9 @@ import { isRealDay, todayISO } from "@/lib/clock";
 import { getAccount } from "@/lib/queries/accounts";
 import { providerProblem } from "@/lib/ai/client";
 import { ROLES } from "@/lib/ai/models";
-import { BudgetError, MAX_UPLOAD_BYTES, startImportRun, storeCustomerDocument, storeReportDocument, UploadError } from "@/lib/import/run";
+import { BudgetError, MAX_UPLOAD_BYTES, startImportRun, storeCustomerDocument, storeReportDocument, importLocalReport, UploadError } from "@/lib/import/run";
+import { ImportIdentityError } from "@/lib/import/accountIdentity";
+import { localOnly } from "@/lib/localMode";
 
 export const runtime = "nodejs";
 
@@ -58,6 +60,10 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
         const doc = await storeCustomerDocument({ accountId: id, filename: file.name || "document.txt", bytes, userId: user.id });
         return NextResponse.json({ documentId: doc.id });
       }
+      if (localOnly()) {
+        const result = await importLocalReport({ accountId: id, filename: file.name || "report.json", bytes, userId: user.id }, asOf);
+        return NextResponse.json({ result });
+      }
       // Refuse before storing a report that this deployment cannot extract.
       // Keeping customer documents above does not require an AI provider.
       const problem = providerProblem(ROLES.import.provider);
@@ -66,6 +72,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       const runId = startImportRun(doc, user.id, asOf);
       return NextResponse.json({ runId, documentId: doc.id });
     } catch (e) {
+      if (e instanceof ImportIdentityError) return NextResponse.json({ error: e.message }, { status: 409 });
       if (e instanceof UploadError) return NextResponse.json({ error: e.message }, { status: 400 });
       if (e instanceof BudgetError) return NextResponse.json({ error: e.message }, { status: 429 });
       throw e;

@@ -4,6 +4,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { AnthropicBedrock } from "@anthropic-ai/bedrock-sdk";
 import { fakeEnabled } from "./fake";
 import type { Provider } from "./models";
+import { localOnly } from "../localMode";
 
 const TIMEOUT_MS = 10 * 60 * 1000;
 
@@ -14,7 +15,7 @@ const cache: Partial<Record<Provider, AnyClient>> = (g.__aiClients ??= {});
 
 // A human-readable reason the provider cannot be used, or null when it can.
 export function providerProblem(provider: Provider): string | null {
-  if (process.env.STRATEGY_LOCAL_ONLY === "1") return "External AI is disabled in StrategyLocal. Local models are not configured yet.";
+  if (localOnly()) return "External AI is disabled in StrategyLocal. Bring research from MyAgent and import it locally; no Bedrock or Anthropic account is required.";
   if (fakeEnabled()) return null;
   if (provider === "direct") {
     return process.env.ANTHROPIC_API_KEY ? null : "ANTHROPIC_API_KEY is not set; web research is unavailable";

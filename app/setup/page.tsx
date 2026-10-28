@@ -5,6 +5,7 @@ import { backupCheck, budgetChecks, clockChecks, databaseChecks, originChecks, m
 import { Page } from "@/components/Nav";
 import { Chip, Empty, PageHeader, Section } from "@/components/ui";
 import { ProviderCheck } from "@/components/ProviderCheck";
+import { localOnly } from "@/lib/localMode";
 
 export const dynamic = "force-dynamic";
 
@@ -47,12 +48,13 @@ function worst(checks: SetupCheck[]): "ok" | "warn" | "bad" {
 export default async function SetupPage() {
   const user = await requirePageUser();
   const h = await headers();
+  const local = localOnly();
   const database = databaseChecks();
   const clock = clockChecks();
-  const budget = budgetChecks();
+  const budget = local ? [] : budgetChecks();
   const providers = providerChecks();
-  const scheduler = schedulerChecks();
-  const mail = mailChecks();
+  const scheduler = local ? [] : schedulerChecks();
+  const mail = local ? [] : mailChecks();
   const origins = originChecks(h.get("host"), h.get("x-forwarded-host"));
   // The only check that talks to anything outside this process.
   const backup = await backupCheck();
@@ -82,22 +84,28 @@ export default async function SetupPage() {
         <Checks checks={providers} />
         {/* Configuration is not the same as a provider answering, and the
             difference is the whole point of pressing this. */}
-        <div className="mt-3">
-          <ProviderCheck />
-        </div>
+        {!local && (
+          <div className="mt-3">
+            <ProviderCheck />
+          </div>
+        )}
       </Section>
 
-      <Section title="Money" aside={<Chip tone={TONE[worst(budget)]}>{WORD[worst(budget)]}</Chip>}>
-        <Checks checks={budget} />
-      </Section>
+      {!local && (
+        <>
+          <Section title="Money" aside={<Chip tone={TONE[worst(budget)]}>{WORD[worst(budget)]}</Chip>}>
+            <Checks checks={budget} />
+          </Section>
 
-      <Section title="Running on its own" aside={<Chip tone={TONE[worst(scheduler)]}>{WORD[worst(scheduler)]}</Chip>}>
-        <Checks checks={scheduler} />
-      </Section>
+          <Section title="Running on its own" aside={<Chip tone={TONE[worst(scheduler)]}>{WORD[worst(scheduler)]}</Chip>}>
+            <Checks checks={scheduler} />
+          </Section>
 
-      <Section title="Mail and calendars" aside={<Chip tone={TONE[worst(mail)]}>{WORD[worst(mail)]}</Chip>}>
-        <Checks checks={mail} />
-      </Section>
+          <Section title="Mail and calendars" aside={<Chip tone={TONE[worst(mail)]}>{WORD[worst(mail)]}</Chip>}>
+            <Checks checks={mail} />
+          </Section>
+        </>
+      )}
 
       <Section title="Behind the proxy" aside={<Chip tone={TONE[worst(origins)]}>{WORD[worst(origins)]}</Chip>}>
         <Checks checks={origins} />
@@ -105,10 +113,12 @@ export default async function SetupPage() {
 
       <Section title="Backup" aside={<Chip tone={TONE[backup.state]}>{WORD[backup.state]}</Chip>}>
         <Checks checks={[backup]} />
-        <p className="mt-2 max-w-prose text-micro text-ink-muted">
-          Read from S3 rather than from anything this app writes down, so it is true even when the backup container has been failing quietly. The
-          restore drill is in <span className="font-mono">deploy/README.md</span> — a backup nobody has restored is a hope, not a backup.
-        </p>
+        {!local && (
+          <p className="mt-2 max-w-prose text-micro text-ink-muted">
+            Read from S3 rather than from anything this app writes down, so it is true even when the backup container has been failing quietly. The
+            restore drill is in <span className="font-mono">deploy/README.md</span> — a backup nobody has restored is a hope, not a backup.
+          </p>
+        )}
       </Section>
 
       <p className="text-micro text-ink-muted">

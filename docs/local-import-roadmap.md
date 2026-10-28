@@ -3,7 +3,7 @@
 ## Implemented in this review
 
 - Customer-document upload stays available when AI is unavailable, including local-only mode. It preserves the original and readable text without an AI run or account proposals.
-- Unavailable report extraction returns HTTP 503 before storing a report. The current run infrastructure still requires an available provider even for recognized JSON exports; offline structured report import is future work.
+- Structured MyAgent JSON now creates reviewable proposals locally without an AI provider or run. Unsupported report formats are rejected with guidance to keep them as reference documents. See `myagent-import.md`.
 - Report extraction checks the selected account before creating proposals. Different names, conflicting CRM IDs, or an ID already assigned to another account fail the entire run. The original remains available for inspection. Name comparison tolerates only case and whitespace; aliases need explicit future support. A failure cannot be bypassed with Accept all because no proposals are created.
 
 ## Next product journey
@@ -30,7 +30,7 @@ Extend existing meetings, briefs, attendees and actions. Link original briefing 
 
 ### 5. Local execution
 
-Implement deterministic package validation and reviewable imports without requiring an AI provider. Connect import jobs to durable execution before claiming restart recovery; the current queue only runs maintenance. Add local model adapters after the import contract works without a model. Keep unavailable features visibly explained.
+The single-account JSON import works without a provider. Extend it to deterministic package validation and multi-document reviewable imports. Connect import jobs to durable execution before claiming restart recovery; the current queue only runs maintenance. Add local model adapters after the import contract works without a model. Keep unavailable features visibly explained.
 
 ## Acceptance fixtures to add
 
@@ -62,3 +62,9 @@ The full regression run completed with 1,635 passing tests and two failures in u
 - `tests/writer.test.ts`: the briefing loses a same-day deal change during the Pacific evening. `lib/meetings/contextPack.ts` uses UTC midnight for its cutoff while `todayISO()` uses the app timezone. Follow-up: use timezone-aware calendar-day boundaries for both email and deal-change windows, with fixed-clock tests covering evening and daylight-saving transitions.
 
 Sandboxed network tests initially timed out; those integration suites passed when rerun with local networking available. No customer data or live provider credentials were needed for these checks.
+
+### Local-only MyAgent follow-up
+
+Cloud AI now defaults off even when credentials are present. Local setup no longer requires provider connections or S3, and single-account MyAgent JSON imports create pending proposals without an AI run or budget. The synthetic legacy-cloud test suites explicitly opt into their existing fake-provider mode; production defaults stay local.
+
+Validation: 27 focused checks passed, TypeScript and the privacy scan passed, and the production build and login smoke test passed. The final full suite had 1,640 passes and the same two failures described above. Local tests cover zero-budget JSON imports, no AI runs, pending-only changes, repeat-upload deduplication, account conflicts, missing account identity, and local Setup rendering.

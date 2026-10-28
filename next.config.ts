@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { localOnly } from "./lib/localMode";
 
 // Security headers live in deploy/Caddyfile, not here: they belong to the
 // deployment, and Dasher's review found that keeping them beside the proxy
@@ -45,7 +46,7 @@ const config: NextConfig = {
   },
   async headers() {
     return [
-      ...(process.env.STRATEGY_LOCAL_ONLY === "1" ? [{
+      ...(localOnly() ? [{
         source: "/:path*",
         headers: [
           { key: "Content-Security-Policy", value: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; font-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" },

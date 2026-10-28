@@ -21,7 +21,6 @@ const envKey = (model: string) => `AI_PRICE_${model.replace(/[^A-Za-z0-9]/g, "_"
 const SUFFIXES = ["INPUT", "OUTPUT", "CACHE_READ", "CACHE_WRITE"] as const;
 
 const files = {
-  ".env.example": readFileSync(".env.example", "utf8"),
   "deploy/.env.example": readFileSync("deploy/.env.example", "utf8"),
   "deploy/compose.yml": readFileSync("deploy/compose.yml", "utf8"),
 };
@@ -40,9 +39,8 @@ describe("the price override names the model that actually runs", () => {
         expect(files["deploy/.env.example"], `deploy/.env.example should declare ${key} for ${model}`).toContain(`${key}=`);
         expect(files["deploy/compose.yml"], `compose should forward ${key} for ${model}`).toContain(`${key}: \${${key}:-}`);
       }
-      // The developer-facing file documents the pattern rather than declaring
-      // every variable, so it only has to name the model's own key once.
-      expect(files[".env.example"], `.env.example should show the override name for ${model}`).toContain(`${envKey(model)}_INPUT`);
+      // The root .env.example is local-only and has no model rates. All cloud
+      // rate configuration is retained and checked in deploy/.env.example.
     }
   });
 

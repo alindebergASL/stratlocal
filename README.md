@@ -4,6 +4,8 @@ Local account-intelligence workspace for macOS, based on the reviewed Strategy N
 
 **Start here: [Mac container setup](deploy/local/README.md)**
 
+**Bedrock is not required. Cloud AI is off by default.** Prompt MyAgent separately, then bring its results into this local workspace. [Import MyAgent JSON for review or keep research documents as references](docs/myagent-import.md).
+
 ## Foundation pilot
 
 - Loopback-only browser access and persistent local storage.
@@ -11,7 +13,7 @@ Local account-intelligence workspace for macOS, based on the reviewed Strategy N
 - Durable maintenance-job queue and backup/restore tools.
 - Original Strategy account-planning UI and data model.
 
-Apple Foundation Models, Ollama, and reviewable MyAgent package imports are planned next. They are not implemented in this pilot.
+Single-account structured JSON imports now work without AI. Apple Foundation Models, Ollama, and multi-document MyAgent package imports remain future work.
 
 ## Validation
 

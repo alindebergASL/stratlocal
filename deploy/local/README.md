@@ -24,6 +24,8 @@ The database and original documents persist in the `strategylocal_local_data` Do
 
 ## Scope
 
+Bedrock and Anthropic are intentionally off, including when credentials exist on the host. No AWS or MyAgent API setup is required. Prompt MyAgent separately and import its results using [the local import workflow](../../docs/myagent-import.md). Structured single-account JSON creates reviewable proposals without AI; PDF, HTML and Markdown can be kept as reference documents.
+
 - Existing Next.js/TypeScript UI and SQLite domain model.
 - Loopback-only port 3000; local HTTP cookies; login remains required.
 - Non-root containers, read-only images, private data volume, combined memory limits below 4 GiB.

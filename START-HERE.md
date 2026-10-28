@@ -2,6 +2,8 @@
 
 Start with [Mac setup instructions](deploy/local/README.md).
 
+No Bedrock or other cloud AI account is needed. Cloud AI is off by default. Prompt MyAgent separately and use the [local import workflow](docs/myagent-import.md) for structured JSON or reference documents.
+
 This is a source snapshot of the reviewed Strategy version plus a separate local deployment. It is not yet the finished account-package import application. The existing root README describes the upstream cloud application; use `deploy/local/README.md` for this pilot.
 
 Included: Docker configuration, persistent storage, local login, cloud-AI refusal, system fonts, offline network configuration, durable maintenance-job queue, backup/restore tooling and tests.

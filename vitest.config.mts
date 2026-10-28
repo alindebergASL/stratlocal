@@ -11,6 +11,9 @@ export default defineConfig({
     env: {
       // Tests never touch the real database file.
       DB_PATH: ":memory:",
+      // Exercise inherited cloud workflows with fake providers. Local-mode
+      // regression tests explicitly enable the production default.
+      STRATEGY_LOCAL_ONLY: "0",
     },
   },
   resolve: {

@@ -141,6 +141,7 @@ for (const flow of flows) {
     env: {
       ...process.env,
       AI_FAKE: "1",
+      STRATEGY_LOCAL_ONLY: "0", // Synthetic upstream cloud-workflow tests only.
       PORT: String(PORT),
       DB_PATH: join(dataDir, "app.db"),
       USER1_EMAIL: USERS.E2E_USER1_EMAIL,
