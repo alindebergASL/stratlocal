@@ -4,14 +4,11 @@
 
 StrategyLocal is a local workspace. Cloud AI is off by default: no Bedrock or Anthropic account, AWS region, API key, or AI budget is needed. The Mac container keeps its isolated network configuration. MyAgent is used separately when you ask it for research; StrategyLocal does not connect to MyAgent or trigger research automatically.
 
-## Two import choices
+## Import through the current local workspace
 
-Open an account and choose Import:
+Open an account → **Evidence & MyAgent** → **Import for review**. A supported structured JSON report can create pending proposals after identity review and **Prepare proposals**; reference files preserve the original and extracted text. Review/accept proposals before account records change. Narrative-only reports do not automatically become structured facts.
 
-- **MyAgent JSON report** creates pending proposals from a supported structured export. Parsing and validation run locally without a model, AI run, or API charge. Review and accept the proposals before they change the account plan.
-- **Reference document** keeps PDF, HTML, Markdown, Word, text or JSON originals and readable text with the account. It does not extract account changes. Use this for narrative research, briefings, source notes and supporting evidence.
-
-PowerPoint ingestion, territory packages and page/slide citations remain future work. The existing JSON import covers a single account, seller team, opportunities, installed base and plays. It does not yet structure arbitrary metrics, meeting decks, evidence classifications or customer-confirmed answers. Preserve that material in reference documents; do not force wallet, bookings or pipeline figures into installed-base fields.
+This page describes the compatible single-account JSON report fields. ZIP packages support multiple accounts, scoped metrics, and PDF/PPTX/section evidence; use [the package guide](local-workspace.md) for those features. Do not force wallet, bookings, or pipeline figures into installed-base fields.
 
 ## A supported JSON example
 
@@ -41,9 +38,9 @@ Ask MyAgent for a UTF-8 `.json` file with this shape, using the exact account na
 }
 ```
 
-`account.name` is required, along with at least one supported team/deal/install-base/play record. Omit records and fields the research does not support; do not invent identifiers or amounts to satisfy the format. Deal IDs must be 4–32 letters, digits, underscores or hyphens. Stage, when supplied, is an integer from 1–6. Monetary values are whole US dollars. Use the report-date field for its actual as-of date. Unsupported fields remain in the original but do not become structured account updates.
+`account.name` is required, along with at least one supported team/deal/install-base/play record. Omit records and fields the research does not support; do not invent identifiers or amounts to satisfy the format. Deal IDs must be 4–32 letters, digits, underscores or hyphens. Stage, when supplied, is an integer from 1–6. Monetary values are whole US dollars. For an explicit as-of date, use the version-1 ZIP manifest’s `as_of`; standalone JSON imported through this workspace is dated on the import day. Unsupported fields remain in the original but do not become structured account updates.
 
-Names may differ only in case or whitespace. A different account name, conflicting CRM ID, or CRM ID assigned to another account stops proposals. Inspect the original and correct the source or choose the proper account. An alias is not automatically treated as the same organization.
+Names are not fuzzy-matched. Select a target account and explicitly approve a different name as an alias only after reviewing identity. Conflicting CRM IDs, including an ID assigned to another account, still block proposals.
 
 Example instruction to give MyAgent:
 
@@ -53,6 +50,4 @@ Repeated imports reuse the original document and existing pending proposals wher
 
 ## Local setup
 
-For your Mac, follow `deploy/local/README.md`. For development, copy `.env.example` to `.env.local`, supply your own local login, and use Node 22 with `npm ci` and `npm run dev`. Bind a development server to localhost when starting it (`npm run dev -- --hostname 127.0.0.1`).
-
-The Setup page reports cloud AI as intentionally off. Backups use the local backup/restore procedure; no S3 check runs in local mode. The inherited cloud workflows remain in the source for possible future use, but require an explicit configuration change. Their upstream documentation is not a prerequisite for this local workflow.
+Follow [the checked Mac installation](../deploy/local/README.md). Model setup is optional and has its own [prerequisite and availability checks](local-model-setup.md). The inherited cloud documentation is not a prerequisite for this workflow.

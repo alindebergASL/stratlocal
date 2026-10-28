@@ -48,7 +48,7 @@ services:
       disable: true
 secrets:
   bootstrap_password:
-    file: ./bootstrap-password.txt
+    file: ${BOOTSTRAP_PASSWORD_FILE:-./bootstrap-password.txt}
 networks:
   offline:
     internal: true

@@ -1,5 +1,14 @@
 # Validation
 
+## Setup-guide audit — 2026-10-28
+
+- Checked the instructions against the tracked scripts, schema, UI, Dockerfile, and Compose files. Removed stale foundation-only instructions and unconfigured development-server fallback advice.
+- Docker Compose v2.40.3 successfully resolves the base, exchange-only, models-only, combined, and restore configurations. Verified secret and gateway-script paths resolve relative to `deploy/local`.
+- Docker Engine 28.4.0 with `node:22-bookworm-slim`, UID 10001: a synthetic host-owned 600 bind-mounted secret fails with EACCES; a 444 file within a private 700 host directory is readable. No real credential was used. The guide and optional secret-path configuration now use that layout.
+- Backup-wrapper regression tests cover only-app-running, both-running with snapshot failure, and initially-stopped cases. Shell syntax checks pass.
+- These checks do not validate Docker Desktop file-sharing behavior, the complete Mac image build/start, Swift compilation, Apple inference, or Keychain. The revised guide provides explicit checks and stop conditions for each unverified dependency.
+
+
 ## Local workspace implementation — 2026-10-28
 
 - Production build and TypeScript pass on Node 22.

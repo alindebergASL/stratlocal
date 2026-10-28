@@ -4,6 +4,8 @@ This is a personal local workspace, not a cloud deployment or a clone of all ups
 
 ## First workflow
 
+Complete [base Mac setup](../deploy/local/README.md) first. The steps below describe the current local UI; model drafting is optional and requires the separate model checks.
+
 1. Create/select an account. Open **Evidence & MyAgent** and import reference files or a MyAgent package.
 2. In **Imports & tasks**, inspect the originals, extraction warnings, and account identities. Choose a target account explicitly for uncertain matches. Approving a name alias never overrides a conflicting CRM ID.
 3. **Prepare proposals** links the sources and territory snapshot. Accept/reject account changes in **Review changes**. Accept/reject metric observations on the package page. Neither import nor model execution accepts account changes automatically.
@@ -42,32 +44,11 @@ Wallet, pipeline, bookings, and installed base are separate observations with un
 
 Uploads are limited to 25 MB compressed, 100 MB expanded, 20 MB per ZIP member, and 500 entries. ZIP traversal, encrypted members, symlinks and duplicate paths are rejected. Original bytes are kept with SHA-256 hashes even when text extraction fails. Text omissions are visible. Model context is deliberately limited to 9,000 source characters, up to 3,000 per segment, with omissions shown before execution.
 
-## Optional watched exchange folder
+## Optional exchange folder and local models
 
-Create a dedicated folder on your Mac and set `STRATEGY_EXCHANGE_HOST_DIR` in your Compose environment. Add `-f deploy/local/compose.exchange.yaml` to the base Compose command, then enable watching in **Settings**. Ensure the container user can write the mounted folder.
+Follow [the checked, step-by-step optional Mac setup](local-model-setup.md). It includes prerequisites, private secret-file permissions, two-way exchange-folder checks, Apple/Ollama availability, host and Docker bridge checks, and commands for enabling both options together. Native Mac execution is still unverified; a failed check is a stop condition, not an instruction to expose the helper or enable cloud AI.
 
-The app creates `Requests`, `Incoming`, and `Processed`. Prepared requests can be written to `Requests`; MyAgent response packages go into `Incoming`. Files must be stable for five seconds. `.part`, `.tmp`, hidden files, and symlinks are ignored. Valid imports move to `Processed` only after extraction succeeds. Failed files remain in `Incoming`; edit the file contents to submit a corrected package. Duplicate content does not create duplicate tasks. The exchange directory is a server-configured mount, not a path supplied by a document.
-
-## Optional local models on a Mac
-
-Requirements: Node 22, repository dependencies (`npm ci`), Xcode command-line tools. Apple Foundation Models additionally require macOS 26+, an SDK with FoundationModels, supported Apple Intelligence hardware, enabled Apple Intelligence, and downloaded system models. Ollama must be installed/running separately with the desired model already downloaded. The app never downloads models or switches to an external model on failure.
-
-```sh
-bash deploy/host/install.sh
-node deploy/host/server.mjs
-```
-
-The installer creates a private token and compiled Swift helper under `~/.strategylocal-models`. The Node bridge runs in the foreground on **127.0.0.1:4242**, talks to Ollama at **127.0.0.1:11434**, and invokes the native helper for Apple models and macOS Keychain. Keep it running while using models. Stop it with Ctrl-C. On older SDKs the helper can still handle Keychain, but reports Apple models unavailable.
-
-For a local Next development server, set `MODEL_BRIDGE_URL=http://127.0.0.1:4242` and `MODEL_BRIDGE_TOKEN_FILE` to the absolute token path. For Docker Desktop, set `MODEL_BRIDGE_TOKEN_PATH` to that file and run:
-
-```sh
-docker compose -f deploy/local/compose.yaml -f deploy/local/compose.models.yaml --env-file deploy/local/.env up --build -d
-```
-
-The optional gateway accepts only authenticated model operations and forwards to the fixed Mac host endpoint. The app remains on its internal Docker network; the gateway publishes no host port. If Docker Desktop cannot reach the loopback-bound host helper, the Settings page reports it unavailable. Do not expose the helper on a public interface; use the local development configuration until the Mac networking path has been validated.
-
-**External AI**, under Settings → Advanced, is disabled by default in both app and helper. Enable it explicitly, then store provider credentials in Keychain through that page. Credentials are not stored in SQLite or workspace backups. Each external task has an immutable context preview and requires a separate checkbox approving that dispatch. Disabling cancels queued/running external tasks and aborts active helper requests; already transmitted text cannot be recalled. Inherited cloud workflows remain disabled by `STRATEGY_LOCAL_ONLY=1`; this switch must stay enabled.
+The helper is a foreground process and must stay running for model tasks. MyAgent is still a manual exchange. External AI stays disabled unless explicitly enabled in Advanced settings and separately approved for each task.
 
 ## Persistence, backup, and recovery
 
