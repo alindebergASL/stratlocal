@@ -1,3 +1,4 @@
+import { localOnly } from "@/lib/localMode";
 import { PlanTabs } from "../playbook/PlaybookNav";
 import { currentPlaybook } from "@/lib/playbook/store";
 import Link from "next/link";
@@ -57,14 +58,14 @@ export default async function AccountPlanTab({ params }: { params: Promise<{ id:
             <span>
               {plays.length} play{plays.length === 1 ? "" : "s"}
             </span>
-            <RunButton
+            {localOnly() ? <Link href={`/accounts/${id}/evidence`} className="text-label underline">Draft from local evidence</Link> : <RunButton
               url={`/api/accounts/${id}/plan-draft`}
               label="Draft plan"
               busyLabel="Drafting…"
               kind="plan_draft"
               tone="quiet"
               disabledReason={aiProblem ?? notReady ?? (inFlight ? "Another AI run is working on this account." : null)}
-            />
+            />}
           </>
         }
       >

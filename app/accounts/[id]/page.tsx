@@ -1,3 +1,5 @@
+import { localOnly } from "@/lib/localMode";
+import { LocalOverview } from "@/components/local/Workspace";
 import Link from "next/link";
 import { weekSummary } from "@/lib/queries/ourWork";
 import { workLine } from "@/components/WeekStrip";
@@ -72,6 +74,7 @@ export default async function AccountPage({ params }: { params: Promise<{ id: st
   // hang; the destination sends you where the todos actually are.
   if (account.kind === "own_work") redirect("/follow-ups");
 
+  if (localOnly()) return <LocalOverview account={account} user={user}/>;
   const now = new Date();
   const today = todayISO(now);
   const isArchived = account.archived_at != null;

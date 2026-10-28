@@ -1,3 +1,5 @@
+> For multi-account ZIP packages, source citations, the watched exchange folder, and local model drafts, use the [local workspace guide](local-workspace.md). This page documents the compatible single-account report format.
+
 # Bringing MyAgent research into StrategyLocal
 
 StrategyLocal is a local workspace. Cloud AI is off by default: no Bedrock or Anthropic account, AWS region, API key, or AI budget is needed. The Mac container keeps its isolated network configuration. MyAgent is used separately when you ask it for research; StrategyLocal does not connect to MyAgent or trigger research automatically.

@@ -1,3 +1,5 @@
+import { localOnly } from "@/lib/localMode";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import { WeekStrip } from "@/components/WeekStrip";
 import { weekSummary } from "@/lib/queries/ourWork";
@@ -51,6 +53,7 @@ export const dynamic = "force-dynamic";
 // everything else is behind a count at the bottom of this one.
 export default async function Home({ searchParams }: { searchParams: Promise<{ who?: string | string[]; view?: string | string[] }> }) {
   const user = await requirePageUser();
+  if (localOnly()) redirect("/accounts");
   const now = new Date();
   const today = todayISO(now);
   // Whose accounts this page is about. It scopes everything below, because a

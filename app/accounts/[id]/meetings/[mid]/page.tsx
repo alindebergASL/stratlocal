@@ -1,3 +1,5 @@
+import { localOnly } from "@/lib/localMode";
+import { LocalMeeting } from "@/components/local/Workspace";
 import { AskAboutThis } from "@/components/AskAboutThis";
 import Link from "next/link";
 import { PlanningCapture } from "@/components/PlanningCapture";
@@ -64,6 +66,7 @@ export default async function MeetingPage({ params, searchParams }: { params: Pr
   const meeting = getMeeting(mid);
   if (!account || !meeting || meeting.account_id !== id) notFound();
 
+  if (localOnly()) return <LocalMeeting account={account} meeting={meeting} user={user}/>;
   const attendees = meetingAttendees(meeting);
   // Same rule as a play's linked people: only rendered checkboxes are
   // submitted, so someone who attended and has since been archived has to be

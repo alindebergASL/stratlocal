@@ -1,3 +1,4 @@
+import { localOnly } from "@/lib/localMode";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { db, type AccountRow } from "@/lib/db";
@@ -47,6 +48,7 @@ export function AccountHeader({ account, tab, actions }: { account: AccountRow; 
   const id = account.id;
   // A merged account lives in the one it went into; its links land there.
   if (account.merged_into) redirect(`/accounts/${account.merged_into}`);
+  if (localOnly()) return <div className="mb-6 space-y-3"><h1 className="font-display text-title font-bold"><Link href={`/accounts/${id}`}>{account.name}</Link></h1><nav aria-label="Account navigation" className="flex flex-wrap gap-4">{[["Overview",""],["Evidence & MyAgent","/evidence"],["Opportunities","/deals"],["Plan","/plays"],["People","/people"],["Meetings","/meetings"],["Follow-ups","/follow-ups"],["Details","/details"]].map(([label,suffix])=><Link key={label} href={`/accounts/${id}${suffix}`}>{label}</Link>)}</nav></div>;
   const n = tabCounts(id);
   const all: Array<{ tab: AccountTab; label: string; count?: number }> = [
     { tab: "overview", label: "Overview" },

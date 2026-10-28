@@ -1,3 +1,4 @@
+import { localOnly } from "@/lib/localMode";
 import Link from "next/link";
 import type { PublicUser } from "@/lib/auth";
 import { listAccountChoices } from "@/lib/queries/accounts";
@@ -18,6 +19,7 @@ import { inboxCount } from "@/lib/inbox/query";
 // It is one element rather than a sidebar and a header because the command
 // palette listens for ⌘K on the window: two copies would both open.
 export function Nav({ user }: { user: PublicUser }) {
+  if (localOnly()) return <header className="border-b border-line p-4 lg:w-52 lg:shrink-0 lg:border-r"><Link href="/accounts" className="font-display text-lead font-bold">StrategyLocal</Link><nav aria-label="Main navigation" className="mt-4 flex flex-wrap gap-4 lg:flex-col">{[["Accounts","/accounts"],["Territory","/territory"],["Meetings","/meetings"],["Imports & tasks","/imports"],["Review changes","/inbox?kind=changes"],["Settings","/settings/local"]].map(([label,href])=><Link key={href} href={href!}>{label}</Link>)}</nav><form action="/api/auth/logout" method="post" className="mt-6"><button>Sign out</button></form></header>;
   const accounts = listAccountChoices();
   const brand = branding();
   return (

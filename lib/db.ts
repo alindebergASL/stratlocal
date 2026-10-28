@@ -8,6 +8,7 @@ import os from "node:os";
 import path from "node:path";
 import { hashPassword } from "./password";
 import { newId } from "./ids";
+import { LOCAL_SCHEMA } from "./local/schema";
 
 export const DB_PATH = process.env.DB_PATH || path.join(process.cwd(), "data", "strategy.sqlite");
 const IN_MEMORY = DB_PATH === ":memory:";
@@ -1290,6 +1291,7 @@ const MIGRATIONS: Migration[] = [
       `);
     },
   },
+  { id: "048_local_workspace", up: (conn) => { conn.exec(LOCAL_SCHEMA); } },
 ];
 
 // Migration 020_contact_merge_pointer's backfill, named so it can be tested on its own. Pairs a
@@ -1319,6 +1321,10 @@ function runMigrations(conn: Database.Database): number {
   conn.exec(`CREATE TABLE IF NOT EXISTS schema_migrations (id TEXT PRIMARY KEY, applied_at INTEGER NOT NULL)`);
   const has = conn.prepare("SELECT 1 FROM schema_migrations WHERE id = ?");
   const mark = conn.prepare("INSERT INTO schema_migrations (id, applied_at) VALUES (?, ?)");
+  if (!IN_MEMORY && !has.get("048_local_workspace") && (conn.prepare("SELECT COUNT(*) n FROM schema_migrations").get() as { n: number }).n > 0) {
+    const backup = path.join(DATA_DIR, `before-local-workspace-${Date.now()}.sqlite`);
+    conn.prepare("VACUUM INTO ?").run(backup);
+  }
   let applied = 0;
   for (const m of MIGRATIONS) {
     if (has.get(m.id)) continue;

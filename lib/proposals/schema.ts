@@ -56,6 +56,7 @@ export const SourceRef = z
     quote: z.string().max(1000).nullable().optional(),
     url: z.string().max(1000).nullable().optional(),
     finding_index: z.number().int().nonnegative().optional(),
+    locator: z.string().max(120).optional(),
     origin: z.literal("ai_generated").optional(),
     verification: z.enum(["source_excerpt", "report_excerpt"]).optional(),
     refs: z
@@ -64,6 +65,8 @@ export const SourceRef = z
           kind: z.enum(["document", "meeting", "research", "user", "account", "contact", "deal", "play", "action_item", "email"]),
           id: z.string(),
           finding_index: z.number().int().nonnegative().optional(),
+          locator: z.string().max(120).optional(),
+          quote: z.string().max(1000).optional(),
         }),
       )
       .optional(),

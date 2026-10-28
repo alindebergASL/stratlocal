@@ -1,0 +1,6 @@
+services:
+  app:
+    environment:
+      STRATEGY_EXCHANGE_DIR: /exchange
+    volumes:
+      - ${STRATEGY_EXCHANGE_HOST_DIR:?Set STRATEGY_EXCHANGE_HOST_DIR to a dedicated writable MyAgent exchange folder}:/exchange

@@ -1,4 +1,4 @@
-# StrategyLocal foundation pilot
+# StrategyLocal local workspace
 
 Pinned source: alindebergASL/strategy commit `590acd78141ec0f8ef4599fd4e5e337019a7440b`.
 Upstream was checked on 2026-10-27 and had advanced to `399ca168d01a6b0a57eafd1bc66a315d5a4b926a` (22 commits ahead). This pilot deliberately uses the reviewed baseline. No changes have been pushed to the original repository. The distributed source is a snapshot, not an upstream Git history clone.
@@ -22,19 +22,13 @@ Visit http://localhost:3000 and sign in. The bootstrap account is created only w
 
 The database and original documents persist in the `strategylocal_local_data` Docker volume. `docker compose down` preserves it; **do not use `down -v`** unless deliberately deleting your data. This volume belongs to one installation. Never place the SQLite files in OneDrive or share this volume between Macs.
 
-## Scope
+## Workspace behavior
 
-Bedrock and Anthropic are intentionally off, including when credentials exist on the host. No AWS or MyAgent API setup is required. Prompt MyAgent separately and import its results using [the local import workflow](../../docs/myagent-import.md). Structured single-account JSON creates reviewable proposals without AI; PDF, HTML and Markdown can be kept as reference documents.
+Bedrock and Anthropic are off by default. No AWS or MyAgent API setup is required. The account-first workspace supports reviewed MyAgent packages, source citations, territory observations, meetings, customer confirmations, and optional local-model drafting. See [the workspace guide](../../docs/local-workspace.md) for the package contract, exchange folder, Mac model helper, and advanced external-AI opt-in.
 
-- Existing Next.js/TypeScript UI and SQLite domain model.
-- Loopback-only port 3000; local HTTP cookies; login remains required.
-- Non-root containers, read-only images, private data volume, combined memory limits below 4 GiB.
-- App network marked internal; worker has no network. Cloud AI is refused before SDK construction even if credentials appear. Browser CSP restricts connections and embedded assets to this app.
-- System fonts remove Google font downloads during build.
-- Separate persistent SQLite job queue, one active lease, duplicate request checks, expired-lease recovery and stale-worker fencing. The worker currently supports only `integrity_check`; existing AI/import flows have NOT yet been migrated to this queue. Long-running future handlers need heartbeat and cancellation support.
-- Consistent local backup/restore tooling and tests.
+The base deployment has no runtime internet connection. Optional Compose overrides add a restricted model gateway and/or a dedicated exchange folder. The application owns a durable queue for package import and model tasks; the separate worker retains maintenance jobs. All workspace records live in the local SQLite volume and original files under `docs`.
 
-Apple/Ollama adapters, document package proposals, UI simplification, and automatic retrieval are later work. Existing cloud controls may remain visible but cannot run in this deployment. This pilot has no native Apple companion or Ollama access yet. This configuration is for localhost, not a public deployment.
+Actual Apple inference and Mac Docker connectivity still require Mac validation. This configuration is for localhost, not a public deployment.
 
 ## Backup
 
