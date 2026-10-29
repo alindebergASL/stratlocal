@@ -1,5 +1,6 @@
 import { intakeManifest, intakePrompt } from "./intake";
 import { contextDrafts, contextSources } from "./accountContext";
+import { normalizeSourceLocation } from "./normalize";
 import fs from "node:fs";
 import path from "node:path";
 import { createHash } from "node:crypto";
@@ -135,6 +136,18 @@ export function stagePackage(
   })();
   return packageRow(id)!;
 }
+export function retryPackage(id: string, userId: string) {
+  return db().transaction(() => {
+    const p = packageRow(id);
+    if (!p || p.created_by !== userId) throw new Error("Import not found");
+    if (p.state !== "failed") throw new Error("Only failed imports can be retried");
+    const updated = db().prepare("UPDATE local_jobs SET status='queued',attempts=0,error=NULL,result_json=NULL,owner=NULL,lease_until=NULL,cancel_requested=0,progress='Waiting to retry',updated_at=? WHERE request_key=? AND created_by=? AND status='failed'").run(Date.now(), `import:${id}`, userId);
+    if (!updated.changes) throw new Error("Import task is not ready to retry");
+    db().prepare("UPDATE local_packages SET state='queued',error=NULL WHERE id=?").run(id);
+    return { href: `/imports/${id}`, message: "Original file queued for another import attempt." };
+  })();
+}
+
 export async function parsePackage(
   id: string,
   accountId: string | null,
@@ -245,6 +258,8 @@ export async function parsePackage(
     const a = artifact(artifacts[s.path]!);
     if (!a) throw new Error(`Missing source: ${s.path}`);
     const segments = JSON.parse(a.segments_json) as Segment[];
+    const normalized = normalizeSourceLocation(s, segments);
+    if (normalized) warnings.push(normalized);
     if (s.locator && !segments.some((x) => x.locator === s.locator))
       throw new Error(`Unknown source location: ${s.path} ${s.locator}`);
     if (

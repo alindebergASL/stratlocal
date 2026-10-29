@@ -40,6 +40,14 @@ A standalone [Markdown prompt template](MyAgent_StrategyLocal_Account_Package_Pr
 
 ## Package contract (version 1)
 
+### Flexible input handling
+
+The importer resolves noncanonical source locations when a unique extracted heading or an exact quotation identifies a section. The saved review manifest records the resolved location and a warning explains the adjustment; original file bytes remain unchanged. Ambiguous locations and quotations absent from the source still block import. An explicit canonical location with a mismatched quotation is not silently redirected.
+
+For customer people, recognized role spellings are normalized. Descriptive roles are retained in notes with no inferred buying authority, rather than causing the whole contact to be dropped. Invalid email addresses are omitted while the person remains reviewable. For manifest contacts, an email must also appear on a matching contact in the package's JSON evidence to enter the People proposal; otherwise it stays only in the original and a warning asks you to verify it manually. This corroboration is not independent verification of the source. Other malformed fields and account identity conflicts still require correction.
+
+After updating the app, open a failed import and select **Retry import** to rerun its preserved original with the current parser. For an already processed package whose contacts were skipped, use **Prepare overview & people proposals** instead. Existing accepted records are not rewritten automatically. Inspect import warnings and proposed changes before accepting them.
+
 The import review includes a package overview (as-of date, source namespace, account/file/metric counts), readable account fields, and expandable opportunities, seller-team records, installed-base records, and proposed plays. Expand **Research, stakeholders & source detail** files to read the source briefing, customer contacts, activity history, research, and limitations before accepting changes. Source previews show up to 12,000 characters per file and link to all extracted sections and the original. Missing structured records are labeled as not supplied, rather than treated as proof that none exist. The original reported JSON remains available for inspection.
 
 New intake requests ask for a substantive account assessment, a retrieval coverage ledger, all accessible active opportunities, detailed priority-deal reviews, stakeholder relationships, broader business/funding/procurement research, and a proposed 30/60/90-day plan. Prepare a new request to get the updated prompt; previously saved requests and imported packages retain their original contents. Added detail depends on MyAgent's source access and evidence, and the app does not invent missing information.

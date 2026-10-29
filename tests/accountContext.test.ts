@@ -47,7 +47,8 @@ it("skips mismatched source accounts and does not turn sellers into customers", 
   expect(proposePackage(packageId,USER).proposals).toBe(0);
   const account=db().prepare("SELECT * FROM accounts WHERE id=?").get(accountId) as AccountRow;
   const result=contextDrafts({account:{name:account.name},contacts:[{name:"Synthetic Seller"},{name:"Bad Email",email:"not-an-email"}]},[],account,[{id:"seller",account_id:accountId,name:"Synthetic Seller",org:"vendor",title:null,email:null,role:null,notes:null,created_at:0,updated_at:0}],{kind:"document",id:"source"});
-  expect(result.drafts).toHaveLength(0);
+  expect(result.drafts).toHaveLength(1);
+  expect(result.drafts[0]?.payload).toMatchObject({name:"Bad Email",email:null});
   expect(result.warnings).toHaveLength(2);
 });
 

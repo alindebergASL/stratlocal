@@ -13,6 +13,7 @@ import {
   resolveAccount,
   proposePackage,
   proposeAccountContext,
+  retryPackage,
   prepareRequest,
 } from "@/lib/local/packages";
 import {
@@ -59,6 +60,9 @@ export async function POST(req: NextRequest) {
             flag("alias"),
             user.id,
           );
+          break;
+        case "retry_import":
+          result = retryPackage(text("packageId", 100), user.id);
           break;
         case "propose_account_context":
           result = { ...proposeAccountContext(text("packageId", 100), user.id), message: "Overview and customer-contact proposals are ready for review.", href: "/inbox?kind=changes" };

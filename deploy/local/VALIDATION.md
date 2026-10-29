@@ -1,5 +1,11 @@
 # Validation
 
+## Flexible imports
+
+- Production build/TypeScript and 33 focused normalization, account-context, workspace, and intake tests pass. Tests cover unique heading/exact-quote resolution, ambiguous and mismatched citations, descriptive contact roles, email omission, and owner-scoped retry of failed imports.
+- Chromium acceptance passes with a Markdown heading locator and descriptive customer role in the synthetic input, including proposal acceptance and the People/overview workflow.
+- Normalization preserves originals and records warnings. It uses deterministic local rules, with no model or external service calls. Corroborating an email against packaged JSON does not independently verify that address.
+
 ## Account overview and customer contacts
 
 - Production build/TypeScript and 50 focused tests pass, covering overview/contact proposals, accepted persistence, repeat preparation, legacy JSON contact recovery, source-account mismatches, seller/customer separation, conflicting titles, existing imports, and account merge behavior.

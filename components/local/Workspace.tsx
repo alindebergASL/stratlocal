@@ -274,6 +274,7 @@ export async function ImportPage({ id }: { id: string }) {
       <div className="mt-5 space-y-5">
         <Warnings json={p.warnings_json} />
         {(p.error || j?.error) && <p role="alert">{p.error || j?.error}</p>}
+        {p.state === "failed" && p.created_by === user.id && <LocalForm operation="retry_import" label="Retry import"><Hidden name="packageId" value={id} /></LocalForm>}
         {m && <section className={card}>
           <h2 className="text-lead">Package overview</h2>
           <p>As of {m.as_of} · Source namespace: {m.namespace}</p>

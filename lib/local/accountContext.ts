@@ -3,7 +3,7 @@ import { db, type AccountRow, type ContactRow } from "../db";
 import { sameName } from "../format";
 import { matchContact } from "../matchContact";
 import { jsonExtraction } from "../import/jsonReport";
-import { ContactPatch, AccountPatch, type ProposalDraft, type SourceRef } from "../proposals/schema";
+import { ContactPatch, ContactRole, contactEmail, AccountPatch, type ProposalDraft, type SourceRef } from "../proposals/schema";
 import { artifact } from "./store";
 
 type ObjectValue = Record<string, unknown>;
@@ -56,8 +56,26 @@ export function contextDrafts(report: ObjectValue, sources: ContextSource[], acc
     const name = str(row.name) || [str(row.first_name), str(row.last_name)].filter(Boolean).join(" ");
     if (!name) { warnings.push("Skipped a customer contact without a name."); continue; }
     if (row.org != null && row.org !== "customer") { warnings.push(`Skipped ${name}: customer contacts must be separate from seller/partner records.`); continue; }
-    const notes = [str(row.notes), ...["organization", "department", "function", "contact_id", "record_url", "relationship", "last_interaction"].map(k => str(row[k]) ? `${k.replaceAll("_", " ")}: ${str(row[k])}` : "")].filter(Boolean).join("\n");
-    const payload = ContactPatch.safeParse({ name, title: str(row.title) || null, email: str(row.email) || null, org: "customer", role: row.role ?? null, notes: notes || null });
+    const roleText = str(row.role);
+    const normalizedRole = roleText.toLowerCase().replace(/[ -]+/g, "_");
+    const role = ContactRole.safeParse(normalizedRole).success ? normalizedRole : null;
+    if (roleText && role !== row.role) warnings.push(`Customer contact ${name}: ${role ? "normalized role spelling" : "preserved descriptive role in notes without inferring buying authority"}.`);
+    let email = str(row.email) || null;
+    const invalidEmail = email && !contactEmail.safeParse(email).success;
+    if (invalidEmail) { email = null; warnings.push(`Customer contact ${name}: invalid email omitted; original retained for review.`); }
+    if (email && Array.isArray(report.contacts) && report.contacts.length) {
+      const corroborated = sources.some(s => {
+        const rows = s.value.contacts ?? s.value.stakeholders_and_executives;
+        return Array.isArray(rows) && rows.some(candidate => {
+          const c = object(candidate);
+          const sourceName = str(c.name) || [str(c.first_name), str(c.last_name)].filter(Boolean).join(" ");
+          return sameName(sourceName, name) && str(c.email).toLowerCase() === email!.toLowerCase();
+        });
+      });
+      if (!corroborated) { email = null; warnings.push(`Customer contact ${name}: email appears in the report but is not corroborated by a matching contact in the JSON evidence; omitted from the People proposal. Inspect the original before adding it manually.`); }
+    }
+    const notes = [str(row.notes), roleText && !role ? `Reported role (unverified): ${roleText}` : "", ...["organization", "department", "function", "contact_id", "record_url", "relationship", "last_interaction"].map(k => str(row[k]) ? `${k.replaceAll("_", " ")}: ${str(row[k])}` : "")].filter(Boolean).join("\n");
+    const payload = ContactPatch.safeParse({ name, title: str(row.title) || null, email, org: "customer", role, notes: notes || null });
     if (!payload.success) { warnings.push(`Skipped customer contact ${name}: invalid email, role, or field length; inspect the source.`); continue; }
     const person = payload.data as { name: string; email: string | null; title: string | null; org: "customer"; role: string | null; notes: string | null };
     if (matchContact(seen, person)) { warnings.push(`Duplicate customer contact ${name} in the package; review source differences.`); continue; }

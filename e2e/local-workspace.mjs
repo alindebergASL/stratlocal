@@ -152,7 +152,7 @@ try {
           key: "lab",
           report: {
             account: { name: "Synthetic Local Lab", summary: "Synthetic research organization serving local laboratories.", hq: "Synthetic City" },
-            contacts: [{ name: "Synthetic Customer Director", title: "Research Director", org: "customer" }],
+            contacts: [{ name: "Synthetic Customer Director", title: "Research Director", org: "customer", role: "Research planning sponsor" }],
             plays: [
               {
                 title: "Synthetic local opportunity",
@@ -163,7 +163,7 @@ try {
           sources: [
             {
               path: "sources/notes.md",
-              locator: "section:1",
+              locator: "## Preparation",
               quote: "Synthetic customer evidence",
             },
           ],
