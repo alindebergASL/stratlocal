@@ -8,6 +8,6 @@ try {
  assert.equal(r?.status,200);assert.match(r.headers.get('content-security-policy'),/connect-src 'self'/);
  r=await fetch('http://127.0.0.1:3017/api/auth/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:'synthetic@example.invalid',password:'Synthetic-test-only-123'})});
  assert.equal(r.status,200,await r.clone().text());const cookie=r.headers.get('set-cookie');assert.ok(cookie);assert.equal(/; Secure/i.test(cookie),false);
- const home=await fetch('http://127.0.0.1:3017/',{headers:{cookie:cookie.split(';')[0]},redirect:'manual'});assert.equal(home.status,200);
+ const home=await fetch('http://127.0.0.1:3017/',{headers:{cookie:cookie.split(';')[0]},redirect:'manual'});assert.equal(home.status,307);assert.equal(home.headers.get("location"),"/accounts");
  console.log('PASS: production login, bootstrap user, local cookie and authenticated home; CSP present');
 }finally{child.kill('SIGTERM');await new Promise(r=>child.once('exit',r));fs.closeSync(log);fs.rmSync(data,{recursive:true,force:true});}

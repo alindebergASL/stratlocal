@@ -1,5 +1,7 @@
 # Running it on a box
 
+> This is the inherited cloud deployment guide. StrategyLocal currently runs locally with cloud AI off. Use [Mac/local setup](local/README.md); no Bedrock or S3 configuration is required.
+
 One small EC2 instance, Docker Compose, Caddy for the certificate, a nightly
 snapshot to S3. Two users, one SQLite file, no cluster.
 

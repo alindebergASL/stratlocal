@@ -21,6 +21,7 @@ import { ASSISTANTS } from "./assistants/registry";
 import { assistantMode } from "./assistants/settings";
 import { sealingReady } from "./crypto/secretBox";
 import { googleConfigured, googleServiceEmail, graphConfigured } from "./calendar/providers";
+import { localOnly } from "./localMode";
 
 export type CheckState = "ok" | "warn" | "bad";
 
@@ -205,6 +206,7 @@ export function originChecks(host: string | null, forwardedHost: string | null):
 }
 
 export function providerChecks(): SetupCheck[] {
+  if (localOnly()) return [{ label: "Research and imports", state: "ok", value: "Local only — cloud AI off", detail: "Prompt MyAgent separately, then import its structured JSON or keep its documents here. Bedrock and Anthropic credentials are not required." }];
   if (fakeEnabled()) {
     return [
       {
@@ -266,6 +268,7 @@ async function within<T>(ms: number, work: () => Promise<T>, onTimeout: () => T)
 }
 
 export async function backupCheck(): Promise<BackupCheck> {
+  if (localOnly()) return { label: "Local backup", state: "warn", value: "Manual backup and restore", detail: "Use deploy/local/backup.sh and verify a restore using deploy/local/README.md. This check does not verify that a backup exists. S3 is not required and is not contacted." };
   const uri = (process.env.BACKUP_S3_URI ?? "").trim();
   if (!uri) {
     return {

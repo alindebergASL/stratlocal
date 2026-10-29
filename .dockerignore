@@ -16,3 +16,5 @@ e2e
 **/.env
 **/bootstrap-password.txt
 local-backups
+
+deploy/local/secrets

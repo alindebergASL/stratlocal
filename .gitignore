@@ -14,3 +14,5 @@ deploy/.env
 /deploy/local/.env
 /deploy/local/bootstrap-password.txt
 /local-backups/
+
+/deploy/local/secrets/

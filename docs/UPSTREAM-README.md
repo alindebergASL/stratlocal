@@ -1,5 +1,7 @@
 # Strategy
 
+> Historical upstream cloud documentation. Bedrock, Anthropic and AWS setup below are not required for StrategyLocal. Use [the local MyAgent workflow](myagent-import.md) and [Mac setup](../deploy/local/README.md).
+
 A private workspace for two sellers to run their key accounts: a living plan
 with named plays, deals with history, meeting prep and notes, on-demand
 research, and reports to hand to other account teams.

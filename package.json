@@ -25,6 +25,7 @@
     "@anthropic-ai/sdk": "^0.125.0",
     "@aws-sdk/client-s3": "^3.1131.0",
     "better-sqlite3": "^13.0.3",
+    "jszip": "^3.10.1",
     "linkedom": "^0.18.13",
     "mammoth": "1.13.0",
     "next": "16.4.2",
@@ -32,6 +33,7 @@
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "unpdf": "1.8.1",
+    "yauzl": "^3.2.0",
     "zod": "^4.6.2"
   },
   "devDependencies": {
@@ -40,13 +42,14 @@
     "@types/node": "^22.20.2",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "@types/yauzl": "^2.10.3",
     "playwright": "^1.63.0",
     "postcss": "^8.5.15",
     "tailwindcss": "^4.3.3",
     "tsx": "^4.22.4",
     "typescript": "^5.9.2",
-    "vitest": "5.0.3",
-    "vite": "8.3.3"
+    "vite": "8.3.3",
+    "vitest": "5.0.3"
   },
   "overrides": {
     "image-size": "2.0.4",

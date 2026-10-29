@@ -19,7 +19,7 @@ services:
     mem_limit: 3500m
 secrets:
   bootstrap_password:
-    file: ./bootstrap-password.txt
+    file: ${BOOTSTRAP_PASSWORD_FILE:-./bootstrap-password.txt}
 volumes:
   restored:
     external: true

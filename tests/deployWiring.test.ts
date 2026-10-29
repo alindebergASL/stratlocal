@@ -34,7 +34,12 @@ describe("first deployment wiring", () => {
     expect(prices).toContain("AI_PRICE_US_ANTHROPIC_CLAUDE_OPUS_5_5_INPUT");
     expect(prices).toContain("AI_PRICE_CLAUDE_OPUS_5_5_INPUT");
     expect(example).toContain("BEDROCK_MODEL_ID=us.anthropic.claude-opus-5-5");
-    expect(readFileSync(".env.example", "utf8")).toContain("BEDROCK_MODEL_ID=us.anthropic.claude-opus-5-5");
+    // The root example is now the local MyAgent workflow. Cloud configuration
+    // stays in deploy/.env.example; it must not become a local prerequisite.
+    const local = readFileSync(".env.example", "utf8");
+    expect(local).toContain("STRATEGY_LOCAL_ONLY=1");
+    expect(local).toContain("AI_DAILY_CAP_CENTS=0");
+    expect(local).not.toMatch(/^(AWS_REGION|BEDROCK_MODEL_ID|ANTHROPIC_API_KEY)=/m);
   });
 
   it("builds both images with the public hostname and disables HTTP healthchecks only for backup", () => {

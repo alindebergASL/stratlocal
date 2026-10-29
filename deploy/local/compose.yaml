@@ -20,7 +20,7 @@ services:
       - local_data:/app/data
     networks: [offline]
     mem_limit: 3500m
-    cpus: 4
+    cpus: ${APP_CPU_LIMIT:-2}
     pids_limit: 256
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
@@ -48,7 +48,7 @@ services:
       disable: true
 secrets:
   bootstrap_password:
-    file: ./bootstrap-password.txt
+    file: ${BOOTSTRAP_PASSWORD_FILE:-./bootstrap-password.txt}
 networks:
   offline:
     internal: true

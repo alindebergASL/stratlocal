@@ -10,14 +10,16 @@ import { DOCUMENT_ACCEPT } from "@/lib/documents/accept";
 
 type ImportResult = { batchId: string; proposals: number; dropped: string[]; attempts: number };
 
-export function ImportForm({ accountId, today }: { accountId: string; today: string }) {
+export function ImportForm({ accountId, today, reportAvailable = true, localImport = false }: { accountId: string; today: string; reportAvailable?: boolean; localImport?: boolean }) {
   const { start, state, error, busy } = useAiRun<ImportResult>();
   const fileRef = useRef<HTMLInputElement>(null);
   const asOfRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
-  const [purpose, setPurpose] = useState<"report" | "customer_doc">("report");
+  const [selectedPurpose, setPurpose] = useState<"report" | "customer_doc">("report");
+  const purpose = reportAvailable ? selectedPurpose : "customer_doc";
   const [kept, setKept] = useState<{ ok: boolean; text: string } | null>(null);
   const [keeping, setKeeping] = useState(false);
+  const [localResult, setLocalResult] = useState<ImportResult | null>(null);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -26,6 +28,7 @@ export function ImportForm({ accountId, today }: { accountId: string; today: str
     const fd = new FormData();
     fd.append("file", file);
     setKept(null);
+    setLocalResult(null);
     if (purpose === "customer_doc") {
       // Kept as it is: nothing to extract, so no run to wait on.
       fd.append("purpose", "customer_doc");
@@ -43,25 +46,37 @@ export function ImportForm({ accountId, today }: { accountId: string; today: str
       return;
     }
     if (asOfRef.current?.value) fd.append("as_of", asOfRef.current.value);
+    if (localImport) {
+      setKeeping(true);
+      try {
+        const res = await fetch(`/api/accounts/${accountId}/import`, { method: "POST", body: fd });
+        const body = (await res.json()) as { result?: ImportResult; error?: string };
+        if (!res.ok || !body.result) setKept({ ok: false, text: body.error ?? "The import could not be completed." });
+        else { setLocalResult(body.result); router.refresh(); }
+      } catch {
+        setKept({ ok: false, text: "The import response was lost. Check pending changes before trying again." });
+      } finally { setKeeping(false); }
+      return;
+    }
     await start(`/api/accounts/${accountId}/import`, fd);
   }
 
-  const result = state?.status === "done" ? state.result : null;
+  const result = localImport ? localResult : state?.status === "done" ? state.result : null;
 
   return (
     <div>
       <fieldset className="mb-3 flex flex-wrap gap-x-5 gap-y-1 text-label" data-testid="import-purpose">
         <legend className="sr-only">What is this file?</legend>
         <label className="flex min-h-9 items-center gap-2">
-          <input type="radio" name="purpose" value="report" checked={purpose === "report"} onChange={() => setPurpose("report")} className="accent-accent" />
+          <input type="radio" name="purpose" value="report" checked={purpose === "report"} disabled={!reportAvailable} onChange={() => setPurpose("report")} className="accent-accent" />
           <span>
-            <span className="font-semibold text-ink">Account report</span> <span className="text-ink-muted">deals, team, install base, plays</span>
+            <span className="font-semibold text-ink">{localImport ? "MyAgent JSON report" : "Account report"}</span> <span className="text-ink-muted">deals, team, install base, plays</span>
           </span>
         </label>
         <label className="flex min-h-9 items-center gap-2">
           <input type="radio" name="purpose" value="customer_doc" checked={purpose === "customer_doc"} onChange={() => setPurpose("customer_doc")} className="accent-accent" data-testid="import-purpose-customer" />
           <span>
-            <span className="font-semibold text-ink">Customer document</span> <span className="text-ink-muted">their plan, budget, RFP or notes</span>
+            <span className="font-semibold text-ink">{localImport ? "Reference document" : "Customer document"}</span> <span className="text-ink-muted">research, plans, budgets or notes</span>
           </span>
         </label>
       </fieldset>
@@ -69,7 +84,7 @@ export function ImportForm({ accountId, today }: { accountId: string; today: str
         <input
           ref={fileRef}
           type="file"
-          accept={DOCUMENT_ACCEPT}
+          accept={localImport && purpose === "report" ? ".json" : DOCUMENT_ACCEPT}
           required
           aria-label={purpose === "report" ? "Report file" : "Customer document"}
           className="min-w-0 flex-1 text-label file:mr-3 file:rounded-md file:border-0 file:bg-ink file:px-3 file:py-1.5 file:text-label file:font-semibold file:text-ink-invert hover:file:bg-ink-strong"
@@ -85,7 +100,7 @@ export function ImportForm({ accountId, today }: { accountId: string; today: str
           </label>
         )}
         <Button type="submit" disabled={busy || keeping} aria-busy={busy || keeping} data-testid="import-submit">
-          {busy ? "Reading…" : keeping ? "Keeping…" : purpose === "report" ? "Upload and extract" : "Upload and keep"}
+          {busy ? "Reading…" : keeping ? "Processing…" : purpose === "report" ? localImport ? "Import for review" : "Upload and extract" : "Upload and keep"}
         </Button>
       </form>
       {kept && (
@@ -141,19 +156,17 @@ export function ImportForm({ accountId, today }: { accountId: string; today: str
               </>
             ) : result.dropped.length > 0 ? (
               <>
-                <p className="font-semibold">Nothing came through, and it is not because the account already matches.</p>
+                <p className="font-semibold">No new proposals were created. Some input was omitted.</p>
                 <p className="mt-1">
-                  Every deal the model found was dropped: an id it reported is not in the report&rsquo;s own text, so there is no way to tell whether it
-                  read the id or invented it. That check is the one thing standing between a report and a deal nobody can find in the CRM, so it drops
-                  rather than guesses.
+                  Review the omitted items below and correct the source before importing again. Records that already match may also produce no proposals.
                 </p>
               </>
             ) : (
               <p>
-                The account already matches this report — nothing in it differs from what is on file
+                No new proposals were created. The supported changes may already match, be pending review, or have been declined
                 {fmtCostNote(state?.cost_cents ?? null, state?.cost_estimated ?? null)}.{" "}
-                <Link href={`/accounts/${accountId}`} className="underline">
-                  Back to the account.
+                <Link href={`/inbox?kind=changes&account=${accountId}`} className="underline">
+                  Review pending changes.
                 </Link>
               </p>
             )}
@@ -162,7 +175,7 @@ export function ImportForm({ accountId, today }: { accountId: string; today: str
             {result.dropped.length > 0 && (
               <details className="mt-2">
                 <summary className="cursor-pointer text-micro">
-                  {result.dropped.length} dropped for not appearing in the report text
+                  {result.dropped.length} omitted during validation
                 </summary>
                 <ul className="mt-1 list-disc pl-5 text-micro">
                   {result.dropped.map((d) => (

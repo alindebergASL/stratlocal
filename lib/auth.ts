@@ -5,6 +5,7 @@ import type { NextRequest, NextResponse } from "next/server";
 import { db, type SessionRow, type UserRow } from "./db";
 import { randomSessionId } from "./ids";
 import { verifyPassword } from "./password";
+import { localOnly } from "./localMode";
 
 export const SESSION_COOKIE = "strategy_session";
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
@@ -228,7 +229,7 @@ const cookieOptions = () => ({
   httpOnly: true,
   sameSite: "lax" as const,
   path: "/",
-  secure: process.env.NODE_ENV === "production" && process.env.STRATEGY_LOCAL_ONLY !== "1",
+  secure: process.env.NODE_ENV === "production" && !localOnly(),
 });
 
 export function setSessionCookie(res: NextResponse, sessionId: string) {

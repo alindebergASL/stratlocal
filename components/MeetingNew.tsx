@@ -44,6 +44,7 @@ export function MeetingNew({
   today,
   pasteDisabledReason,
   compact = false,
+  allowAi = true,
 }: {
   accountId: string;
   action: (fd: FormData) => Promise<ActionResult | void>;
@@ -53,6 +54,7 @@ export function MeetingNew({
   pasteDisabledReason?: string | null;
   /** Place the two entry controls together; expanded editors keep full width. */
   compact?: boolean;
+  allowAi?: boolean;
 }) {
   const [draft, setDraft] = useState<Draft | null>(null);
   // Remounts the form so the uncontrolled fields pick up new defaults. The
@@ -100,7 +102,7 @@ export function MeetingNew({
 
   return (
     <div className={compact && !pasting && !draft ? "flex flex-wrap items-start gap-2" : undefined}>
-      {!pasting ? (
+      {allowAi && (!pasting ? (
         <div className={compact && !draft ? "" : "mb-3"}>
           <Button variant="quiet" onClick={() => setPasting(true)} data-testid="invite-paste-open">
             Paste invite
@@ -144,7 +146,7 @@ export function MeetingNew({
             </Callout>
           )}
         </div>
-      )}
+      ))}
 
       {draft && (
         <Callout tone="neutral" className="mb-3" testId="invite-read">

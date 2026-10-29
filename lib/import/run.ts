@@ -11,8 +11,9 @@ import { createProposalBatch } from "../proposals/apply";
 import { getAccount, installBaseAt, listContacts, listDeals, listPlays } from "../queries/accounts";
 import { documentFormat, documentText, DocumentFileError, MIME } from "../documents/text";
 import { jsonExtraction } from "./jsonReport";
-import { extractAgentReport } from "./extract";
+import { extractAgentReport, type ExtractOutcome } from "./extract";
 import { diffExtraction } from "./diffExtraction";
+import { assertImportAccountIdentity } from "./accountIdentity";
 
 export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 
@@ -92,19 +93,65 @@ export function startImportRun(doc: DocumentRow, userId: string, asOf?: string |
     // else, JSON included, is read by the model.
     const direct = doc.mime === "application/json" ? jsonExtraction(doc.content_text ?? "", account.name) : null;
     const { extraction, attempts, dropped } = direct ? { ...direct, attempts: 0 } : await extractAgentReport(doc.content_text ?? "", doc.filename, stages);
-    // Archived rows are included on purpose; see AccountState in diffExtraction.
-    const state = {
-      account,
-      deals: listDeals(account.id, { includeArchived: true }),
-      contacts: listContacts(account.id, { includeArchived: true }),
-      plays: listPlays(account.id, { includeArchived: true }),
-      installBaseAtAsOf: installBaseAt(account.id, asOf || todayISO()),
-    };
-    const drafts = diffExtraction(extraction, state, { documentId: doc.id, asOf: asOf || todayISO() });
-    const batch = createProposalBatch(account.id, { kind: "import", id: doc.id, aiRunId: run.id }, drafts);
-    return { batchId: batch.batchId, proposals: batch.ids.length, dropped, attempts };
+    return proposeReport(doc, { extraction, attempts, dropped }, asOf, run.id);
   });
   return run.id;
 }
 
 export { BudgetError };
+
+// Structured imports are synchronous, deterministic and have no AI run or
+// provider/budget dependency. They produce the same reviewable proposals.
+export async function importLocalReport(input: StoreInput, asOf?: string | null): Promise<ImportRunResult> {
+  if (documentFormat(input.filename, input.bytes) !== "json") {
+    throw new UploadError("For account changes, upload structured JSON from MyAgent. Keep PDF, HTML or Markdown as reference documents instead.");
+  }
+  let text: string;
+  try {
+    text = await documentText(input.filename, input.bytes, MAX_UPLOAD_BYTES);
+  } catch (error) {
+    if (error instanceof DocumentFileError) throw new UploadError(error.message);
+    throw error;
+  }
+  const account = getAccount(input.accountId);
+  if (!account) throw new UploadError("Account not found");
+  // Local imports must identify their account explicitly, even though the
+  // inherited JSON reader can fill a missing name for legacy exports.
+  let raw: { account?: { name?: unknown } } | null;
+  try {
+    raw = JSON.parse(text);
+  } catch {
+    throw new UploadError("The JSON could not be read completely.");
+  }
+  if (typeof raw?.account?.name !== "string" || !raw.account.name.trim()) {
+    throw new UploadError("The JSON must include account.name so its account identity can be checked.");
+  }
+  const direct = jsonExtraction(text, account.name);
+  if (!direct) throw new UploadError("This JSON does not contain supported account records. Use the MyAgent JSON format in docs/myagent-import.md.");
+  const doc = await storeReportDocument(input);
+  return proposeReport(doc, { ...direct, attempts: 0 }, asOf, null);
+}
+
+function proposeReport(doc: DocumentRow, outcome: ExtractOutcome, asOf: string | null | undefined, aiRunId: string | null): ImportRunResult {
+  const { extraction, attempts, dropped } = outcome;
+  // Re-read after extraction: the account may have changed while the model
+  // was running. Fail the whole import before any proposal can be accepted.
+  const currentAccount = getAccount(doc.account_id);
+  if (!currentAccount) throw new Error("account no longer exists");
+  const otherAccount = extraction.account.crm_id?.trim()
+    ? db().prepare("SELECT name FROM accounts WHERE TRIM(crm_id) = ? AND id != ? LIMIT 1")
+        .get(extraction.account.crm_id.trim(), currentAccount.id) as { name: string } | undefined
+    : undefined;
+  assertImportAccountIdentity(extraction.account, currentAccount, otherAccount?.name);
+  // Archived rows are included on purpose; see AccountState in diffExtraction.
+  const state = {
+    account: currentAccount,
+    deals: listDeals(currentAccount.id, { includeArchived: true }),
+    contacts: listContacts(currentAccount.id, { includeArchived: true }),
+    plays: listPlays(currentAccount.id, { includeArchived: true }),
+    installBaseAtAsOf: installBaseAt(currentAccount.id, asOf || todayISO()),
+  };
+  const drafts = diffExtraction(extraction, state, { documentId: doc.id, asOf: asOf || todayISO() });
+  const batch = createProposalBatch(currentAccount.id, { kind: "import", id: doc.id, aiRunId }, drafts, { deduplicatePending: aiRunId === null });
+  return { batchId: batch.batchId, proposals: batch.ids.length, dropped, attempts };
+}

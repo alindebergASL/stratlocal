@@ -1,0 +1,28 @@
+# Optional Mac model bridge. Use together with compose.yaml.
+services:
+  app:
+    environment:
+      MODEL_BRIDGE_URL: http://model-gateway:4243
+      MODEL_BRIDGE_TOKEN_FILE: /run/secrets/model_bridge_token
+    secrets:
+      - model_bridge_token
+  model-gateway:
+    image: node:22-bookworm-slim
+    command: ["node", "/gateway.mjs"]
+    volumes:
+      - ../host/gateway.mjs:/gateway.mjs:ro
+    secrets:
+      - model_bridge_token
+    networks: [offline, host_bridge]
+    user: "10001:10001"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 128m
+    pids_limit: 64
+    restart: unless-stopped
+secrets:
+  model_bridge_token:
+    file: ${MODEL_BRIDGE_TOKEN_PATH:?Set MODEL_BRIDGE_TOKEN_PATH to the Mac helper token file}
+networks:
+  host_bridge: {}

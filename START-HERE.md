@@ -1,11 +1,11 @@
-# StrategyLocal — local foundation pilot
+# StrategyLocal
 
-Start with [Mac setup instructions](deploy/local/README.md).
+Start with [the step-by-step Mac setup](deploy/local/README.md), then [the account and MyAgent workflow](docs/local-workspace.md).
 
-This is a source snapshot of the reviewed Strategy version plus a separate local deployment. It is not yet the finished account-package import application. The existing root README describes the upstream cloud application; use `deploy/local/README.md` for this pilot.
+For an existing installation, use [update and verify](deploy/local/README.md#update-an-existing-installation). Start researching an empty account with [the new account intake request](docs/local-workspace.md#new-account-intake-request): prepare a combined Salesforce and web prompt, download Markdown or ZIP, give it to MyAgent, then import and review its response.
 
-Included: Docker configuration, persistent storage, local login, cloud-AI refusal, system fonts, offline network configuration, durable maintenance-job queue, backup/restore tooling and tests.
+If the app is healthy but the browser cannot connect, follow [the port check and temporary gateway workaround](deploy/local/README.md#browser-connection-workaround). Keep an existing temporary gateway running when updating this build.
 
-Validated: production build, TypeScript, real login, cloud-AI gate, queue recovery, backup/restore. Full suite: 1,630 passed and one existing S3 connectivity expectation failed in this environment. Docker and physical Mac acceptance remain unverified.
+The implementation is on the `codex/local-workspace` branch. No Bedrock, AWS, or MyAgent API credentials are required. External AI remains disabled by default.
 
-Next milestone: launch this container on the M4 Pro and pass the Mac acceptance checklist, then implement deterministic package validation and reviewable import proposals. Apple/Ollama model adapters follow the provider boundary work.
+[Optional exchange-folder and local-model setup](docs/local-model-setup.md) is separate from the base installation. Follow its checks before enabling an option. Native Apple inference, Keychain, and Docker Desktop-to-Mac connectivity have not been verified on a physical Mac. See [validation evidence](deploy/local/VALIDATION.md).

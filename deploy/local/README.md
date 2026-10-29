@@ -1,85 +1,238 @@
-# StrategyLocal foundation pilot
+# StrategyLocal: Mac setup, with verification at each step
 
-Pinned source: alindebergASL/strategy commit `590acd78141ec0f8ef4599fd4e5e337019a7440b`.
-Upstream was checked on 2026-10-27 and had advanced to `399ca168d01a6b0a57eafd1bc66a315d5a4b926a` (22 commits ahead). This pilot deliberately uses the reviewed baseline. No changes have been pushed to the original repository. The distributed source is a snapshot, not an upstream Git history clone.
+Use this guide for the local Docker installation. MyAgent is used separately; **Bedrock, AWS credentials, and an AI subscription are not required**. Optional models come after the basic app works.
 
-## Start on your Mac
+The application and browser workflow were tested in Linux. Compose configuration and non-root secret-file access have also been checked in Linux. **The complete Docker Desktop installation, native Apple model, and Keychain flow have not been run on a Mac.** The checks below establish what works on your machine; stop at a failed check instead of assuming the next step will work. See [validation details](VALIDATION.md).
 
-Requires Docker Desktop with Compose. Initial image/dependency downloads require internet. Runtime app and worker use isolated networks. Run from the extracted `strategy-local` directory:
+## 1. Verify the Mac and Docker Desktop
 
-```sh
-cp deploy/local/.env.example deploy/local/.env
-```
-
-Edit `deploy/local/.env` with your email and display name (these are local login details; they do not connect an email account). Create `deploy/local/bootstrap-password.txt` with a unique password of at least 12 characters, then:
+Open Terminal and run these separately:
 
 ```sh
-chmod 600 deploy/local/.env deploy/local/bootstrap-password.txt
-docker compose -f deploy/local/compose.yaml --env-file deploy/local/.env up --build -d
+sw_vers
+uname -m
+git --version
+docker compose version
+docker context show
+docker info
 ```
 
-Visit http://localhost:3000 and sign in. The bootstrap account is created only when the users table is empty. Changing the bootstrap file later does not reset an existing password. Keep the file available for subsequent container starts; it is excluded from the image and source control.
+- `sw_vers` must identify macOS. `uname -m` identifies your architecture; do not assume Apple silicon.
+- If Git is missing, run `xcode-select --install`, complete the macOS dialog, then retry `git --version`.
+- If Docker is missing, install [Docker Desktop for Mac](https://docs.docker.com/desktop/setup/install/mac-install/) for the architecture you just checked. Open Docker Desktop and wait for its engine to start, then retry the Docker commands.
+- `docker compose version` must report Compose v2. `docker info` must succeed against **your local Docker Desktop engine**, not a remote Docker context. If unsure which engine is selected, check Docker Desktop and `docker context ls` before continuing.
 
-The database and original documents persist in the `strategylocal_local_data` Docker volume. `docker compose down` preserves it; **do not use `down -v`** unless deliberately deleting your data. This volume belongs to one installation. Never place the SQLite files in OneDrive or share this volume between Macs.
+Internet is needed for the initial image/dependency downloads. Node is included in the app image; **you do not need host Node for the base installation**. Check the engine's CPU count explicitly:
 
-## Scope
+```sh
+docker info --format '{{.NCPU}}'
+```
 
-- Existing Next.js/TypeScript UI and SQLite domain model.
-- Loopback-only port 3000; local HTTP cookies; login remains required.
-- Non-root containers, read-only images, private data volume, combined memory limits below 4 GiB.
-- App network marked internal; worker has no network. Cloud AI is refused before SDK construction even if credentials appear. Browser CSP restricts connections and embedded assets to this app.
-- System fonts remove Google font downloads during build.
-- Separate persistent SQLite job queue, one active lease, duplicate request checks, expired-lease recovery and stale-worker fencing. The worker currently supports only `integrity_check`; existing AI/import flows have NOT yet been migrated to this queue. Long-running future handlers need heartbeat and cancellation support.
-- Consistent local backup/restore tooling and tests.
+The app defaults to a 2-CPU limit; the maintenance worker has a 1-CPU limit. These are per-container ceilings, not dedicated CPU reservations. If the engine reports only 1 CPU, set `APP_CPU_LIMIT=1` in `deploy/local/.env`. Any custom `APP_CPU_LIMIT` must not exceed the reported count. The earlier hardcoded 4-CPU app limit prevented container creation on 2-CPU Docker Desktop installations; updating the checkout fixes that default without rebuilding the image.
 
-Apple/Ollama adapters, document package proposals, UI simplification, and automatic retrieval are later work. Existing cloud controls may remain visible but cannot run in this deployment. This pilot has no native Apple companion or Ollama access yet. This configuration is for localhost, not a public deployment.
+The Compose configuration caps the app at 3,500 MiB and the maintenance worker at 512 MiB; build memory needs are not measured. If Docker reports out-of-memory errors, stop and check its resource allocation.
+
+## 2. Get the correct source
+
+The implemented workspace is on `codex/local-workspace`; do not assume it is on `main`.
+
+For a new checkout, run from a directory where you want the project stored:
+
+```sh
+git clone --branch codex/local-workspace https://github.com/alindebergASL/stratlocal.git
+cd stratlocal
+git branch --show-current
+test -f deploy/local/compose.yaml && test -f docs/local-workspace.md
+```
+
+Expected branch: `codex/local-workspace`; the last command must exit successfully. If GitHub denies access, sign in to an account with access to this repository or download this branch's ZIP from GitHub. For a ZIP download, open Terminal in the extracted directory containing `package.json` and `deploy/local/compose.yaml`; its directory name is not assumed.
+
+If you already have a checkout or data, **do not re-run initialization over existing files**. Inspect `git status`, back up the existing installation using the Backup section, and keep its `.env`, password, and data volume. The following initialization block deliberately refuses to overwrite local configuration.
+
+For an existing Git checkout with a clean working tree, after backing up:
+
+```sh
+git fetch origin codex/local-workspace
+git switch codex/local-workspace
+git pull --ff-only origin codex/local-workspace
+```
+
+Stop if Git reports local changes, a conflict, or divergent history; do not use reset/force commands to get past it. Skip initialization and continue at step 4 with your existing local configuration. An existing ZIP-based installation needs a separate new extraction and deliberate transfer of local configuration; these Git commands do not apply to it.
+
+All remaining commands start from the repository root unless a step explicitly says otherwise.
+
+## 3. Create the local login files
+
+First check `openssl version`. If it is unavailable, stop; the following password-generation command requires it.
+
+Run this entire block once for a new installation:
+
+```sh
+(
+  set -eu
+  test ! -e deploy/local/.env || { echo 'Existing .env: keep it and use the upgrade instructions.'; exit 1; }
+  test ! -e deploy/local/secrets || { echo 'Existing secrets directory: inspect it before initializing.'; exit 1; }
+  umask 077
+  mkdir deploy/local/secrets
+  cp deploy/local/.env.example deploy/local/.env
+  openssl rand -hex 24 > deploy/local/secrets/bootstrap-password.txt
+  chmod 700 deploy/local/secrets
+  chmod 600 deploy/local/.env
+  chmod 444 deploy/local/secrets/bootstrap-password.txt
+)
+```
+
+Now run `nano deploy/local/.env`. Replace `you@example.com` with the email you want to use for local login and set `USER1_NAME`. Leave `BOOTSTRAP_PASSWORD_FILE=./secrets/bootstrap-password.txt` as supplied. Save with Control-O, Enter, then exit with Control-X. This email does not connect an email account.
+
+The password file is readable inside the non-root container; its **parent directory is private (700)** on the Mac. This avoids assuming a container running as UID 10001 can read a host-owned 600 file. Do not move the 444 file outside that private directory. Both the directory and `.env` are excluded from Git and Docker build inputs.
+
+To copy the generated password for login without printing it:
+
+```sh
+pbcopy < deploy/local/secrets/bootstrap-password.txt
+```
+
+For an existing installation, keep its password path. If `BOOTSTRAP_PASSWORD_FILE` is absent, Compose still uses the original `deploy/local/bootstrap-password.txt`. Run the read-access check below before restarting; if it fails, copy that same password into the private directory layout and update the path—do not generate a new password expecting it to reset an existing account.
+
+## 4. Validate, build, and check file access
+
+```sh
+docker compose -p strategylocal -f deploy/local/compose.yaml --env-file deploy/local/.env config --quiet
+docker compose -p strategylocal -f deploy/local/compose.yaml --env-file deploy/local/.env build app
+docker compose -p strategylocal -f deploy/local/compose.yaml --env-file deploy/local/.env run --rm --no-deps --entrypoint node app -e 'const fs=require("node:fs"); const p=fs.readFileSync("/run/secrets/bootstrap_password","utf8").trimEnd(); if(p.length<12) throw Error("Password must have at least 12 characters"); fs.accessSync("/app/data",fs.constants.W_OK); console.log("Password readable; data directory writable; uid="+process.getuid())'
+```
+
+Each command must succeed. The last should print `Password readable; data directory writable; uid=10001`, without printing the password. `EACCES` means a permissions problem; do not proceed to login. A download/build failure must be resolved before starting. The check may create the named data volume, but it does not initialize the database or change existing records.
+
+## 5. Start and verify the app
+
+```sh
+docker compose -p strategylocal -f deploy/local/compose.yaml --env-file deploy/local/.env up -d
+docker compose -p strategylocal -f deploy/local/compose.yaml --env-file deploy/local/.env ps
+docker compose -p strategylocal -f deploy/local/compose.yaml --env-file deploy/local/.env logs --tail=60 app worker
+```
+
+The app must become **healthy**, and the worker must be running. Health checks run every 30 seconds; repeat `ps` if it still says `starting`. A restarting/unhealthy container is a failure, not a completed installation. Logs may contain customer filenames or other local information; redact them before sharing.
+
+Verify browser access separately from container health:
+
+```sh
+docker compose -p strategylocal -f deploy/local/compose.yaml --env-file deploy/local/.env port app 3000
+curl --noproxy '*' --fail --show-error --output /dev/null --write-out 'HTTP %{http_code}\n' --connect-timeout 5 http://127.0.0.1:3000/login
+```
+
+Normally the first command prints `127.0.0.1:3000` and the second reports HTTP 200. A healthy app with only `3000/tcp` in `ps`, `invalid IP:0`, or connection refused has not passed this check. Follow [the browser connection workaround](#browser-connection-workaround) below. If you already use the temporary gateway, the app's port command can still fail; verify the gateway port and HTTP response instead.
+
+Open **http://127.0.0.1:3000**, sign in with the email from `.env` and the password from step 3. Expect the Accounts page. Create a clearly named test account, then run:
+
+```sh
+docker compose -p strategylocal -f deploy/local/compose.yaml --env-file deploy/local/.env restart app
+```
+
+After the app is healthy again, reload and confirm the test account remains. The commands explicitly select project `strategylocal`; its database and originals live in `strategylocal_local_data`. Do not change the project name or use `down -v` to troubleshoot login; that can select a different volume or delete data. Bootstrap login details are only applied when the users table is empty. Editing the password file or email later does **not** reset an existing login.
+
+Continue with [the first workflow](../../docs/local-workspace.md#first-workflow). MyAgent import and manual editing work without a model. Keep external AI disabled.
+
+## Update an existing installation
+
+First run the [backup](#backup) and check `git status --short`. Stop if it reports local changes. Keep the existing `.env`, password, and data volume. For the base installation, run these commands separately from the repository root and stop on any failure:
+
+```sh
+git switch codex/local-workspace
+git pull --ff-only origin codex/local-workspace
+docker compose -p strategylocal -f deploy/local/compose.yaml --env-file deploy/local/.env config --quiet
+docker compose -p strategylocal -f deploy/local/compose.yaml --env-file deploy/local/.env up -d --build
+docker compose -p strategylocal -f deploy/local/compose.yaml --env-file deploy/local/.env ps
+```
+
+If models or the exchange folder are enabled, use [your complete optional Compose file combination](../../docs/local-model-setup.md) for `config` and `up`, preserving those options. Keep `strategylocal-web-hotfix` running if your installation uses it; it is outside Compose and is still needed by this build.
+
+Repeat the HTTP check in step 5, then refresh the browser. Open an account → **Evidence & MyAgent** and scroll to the bottom. Expect **Prepare a MyAgent request for new account intake**. Prepare a request without selecting evidence and verify **Download prompt (.md)** appears on its review page. This prepares files locally; it does not contact MyAgent or Salesforce. Follow [the intake instructions](../../docs/local-workspace.md#new-account-intake-request) for the complete handoff and import.
+
+## Browser connection workaround
+
+Some Docker engines do not publish the app's port from its internal-only network. The base Compose file still uses that network. This temporary fixed-destination TCP gateway is the workaround used by the current installation; it is not yet part of Compose.
+
+Use it only when the app is healthy but the HTTP check fails and no host port is published. Verify the expected app container and network exist:
+
+```sh
+docker inspect --format '{{.State.Health.Status}}' strategylocal-app-1
+docker network inspect strategylocal_offline --format '{{.Internal}}'
+docker ps -a --filter name=strategylocal-web-hotfix --format '{{.Names}} {{.Status}} {{.Ports}}'
+```
+
+The first two results must be `healthy` and `true`. If the gateway already exists, use `docker start strategylocal-web-hotfix` and skip creation. If it does not exist, run each command below separately, stopping on failure:
+
+```sh
+docker create --name strategylocal-web-hotfix \
+  --restart unless-stopped --network bridge \
+  -p 127.0.0.1:3000:3000 --read-only --cap-drop ALL \
+  --user 10001:10001 --no-healthcheck \
+  --entrypoint node strategylocal-app \
+  -e 'const net=require("node:net"); net.createServer(client=>{const upstream=net.connect(3000,"strategylocal-app-1"); client.pipe(upstream); upstream.pipe(client); client.on("error",()=>upstream.destroy()); upstream.on("error",()=>client.destroy());}).listen(3000,"0.0.0.0");'
+docker network connect strategylocal_offline strategylocal-web-hotfix
+docker start strategylocal-web-hotfix
+```
+
+Verify the gateway and browser endpoint:
+
+```sh
+docker port strategylocal-web-hotfix 3000
+curl --noproxy '*' --fail --show-error --output /dev/null --write-out 'HTTP %{http_code}\n' --connect-timeout 5 http://127.0.0.1:3000/login
+```
+
+Expect `127.0.0.1:3000` and HTTP 200. If port 3000 is already allocated, stop and inspect `docker ps` and `lsof -nP -iTCP:3000 -sTCP:LISTEN`; do not delete an unrelated container or process. If the gateway starts but HTTP fails, inspect `docker logs --tail=60 strategylocal-web-hotfix` and the app logs before continuing.
+
+The gateway joins the default bridge and the app's internal network, forwarding TCP only to `strategylocal-app-1:3000`. It has no data-volume mount; the app remains on its internal network. Keep it running across app updates. Because Compose does not manage it, stop it separately with `docker stop strategylocal-web-hotfix` when shutting down the installation. If the offline network is removed and recreated, its gateway attachment must also be restored before use.
+
+## Optional features
+
+Follow the complete instructions in [optional Mac setup](../../docs/local-model-setup.md) for the exchange folder, Ollama, or Apple models. The guide includes a combined Compose command; running a base-only `up` after adding options can remove those options from recreated containers.
+
+The base app has an internal Docker network; the maintenance worker has no network. The optional model gateway has a second network and forwards fixed authenticated operations to the Mac helper. Runtime isolation on a physical Mac still needs testing. A failed external HTTP request alone does not prove complete isolation; DNS, certificates, or the destination could also cause failure.
 
 ## Backup
 
-From the source root:
+From the repository root:
 
 ```sh
 sh deploy/local/backup.sh
 ```
 
-This stops the app and worker, snapshots SQLite (including the job queue when present) and original documents, writes SHA-256 checksums, then restarts the services. Output is under `local-backups/snapshot-<UTC>/`. Protect backups like the original account data: they include the database's user password hashes, sessions and any integration settings already in that database. Bootstrap secret files are not copied. Use a fresh local database for this pilot, not a cloud production database.
+This targets the default `strategylocal` project in this checkout. It stops app/worker, snapshots `strategy.sqlite`, `jobs.sqlite` if present, and `docs`, then restarts **only the app/worker containers that were running beforehand**, even after a snapshot failure. It uses `start`, preserving existing optional mounts. It does not back up the exchange folder, Mac Keychain, bridge configuration/token, or bootstrap files. Back up any still-unimported MyAgent files separately.
 
-## Restore into a fresh directory
+Expected output: `Backup saved: local-backups/snapshot-<UTC>/`. If the command fails, inspect its output and run the `ps` command from step 5; do not treat a partial directory as a usable backup. Backups contain login password hashes, sessions, customer records, and any stored integration settings. Keep them private.
 
-Restore never overwrites an existing destination. First validate and restore the snapshot into a new directory, using the built image (substitute the actual snapshot name):
+## Restore trial without replacing live data
+
+Use the actual snapshot directory printed by the backup command. The example below uses a placeholder that you must replace; it is not a real snapshot name.
 
 ```sh
 docker run --rm --network none \
   -v "$PWD/local-backups:/backups" \
   --user 0 --entrypoint node strategylocal-app \
-  /app/snapshot.mjs restore /backups/snapshot-YYYYMMDDTHHMMSSZ /backups/restored
+  /app/snapshot.mjs restore /backups/snapshot-REPLACE-WITH-ACTUAL-NAME /backups/restored
 ```
 
-This produces `local-backups/restored` with a checked database and documents. To test it as a separate installation without touching the original volume:
+The built `strategylocal-app` image must exist. `local-backups/restored` must not already exist; the script refuses to overwrite it. Successful output includes `"status":"ok"`. The restored files retain database paths used by this Docker deployment (`/app/data`); do not assume a restore to a different host-app path is portable.
+
+Copy into an empty trial volume:
 
 ```sh
 docker run --rm --network none --user 0 --entrypoint sh \
   -v "$PWD/local-backups/restored:/restore:ro" \
   -v strategylocal_restore_test:/destination strategylocal-app \
   -c 'test -z "$(ls -A /destination)" && cp -a /restore/. /destination/ && chown -R 10001:10001 /destination'
+docker compose -p strategylocal-restore -f deploy/local/restore-test.yaml --env-file deploy/local/.env up -d
+docker compose -p strategylocal-restore -f deploy/local/restore-test.yaml --env-file deploy/local/.env ps
 ```
 
-Start the included isolated restore trial:
+If the copy command fails, stop; the volume may contain an earlier trial. Do not delete it without inspecting it. Once healthy, check `curl --noproxy '*' --fail --show-error --output /dev/null --write-out 'HTTP %{http_code}\n' --connect-timeout 5 http://127.0.0.1:3001/login` before visiting **http://127.0.0.1:3001**, using the login stored in the backup. The restore trial also uses an internal-only network and can encounter the same port-publication problem. The live gateway on port 3000 does not forward to the trial: if port 3001 fails, stop and treat browser restore validation as incomplete. Do not point the live gateway at the trial. Confirm the test account and download an imported original to check its contents. The startup script still needs a readable bootstrap file even though the database already contains users. The trial has no model/exchange override; new model tasks cannot run there.
+
+Stop the trial after inspection:
 
 ```sh
-docker compose -f deploy/local/restore-test.yaml up -d
+docker compose -p strategylocal-restore -f deploy/local/restore-test.yaml --env-file deploy/local/.env down
 ```
 
-Visit http://localhost:3001 and use the login stored in the backup. Do not replace the live volume until that restored instance has been reviewed. Stop the trial with `docker compose -f deploy/local/restore-test.yaml down`.
-
-## Mac acceptance checks still required
-
-1. Build/start on Apple silicon, log in, create a synthetic account, restart, and confirm persistence.
-2. Confirm port 3000 is unavailable from another device.
-3. Test rejected external fetch from the container:
-   `docker compose -f deploy/local/compose.yaml --env-file deploy/local/.env exec app node -e "fetch('https://example.com',{signal:AbortSignal.timeout(5000)}).then(()=>{console.error('UNEXPECTED NETWORK ACCESS');process.exit(1)}).catch(()=>console.log('network blocked'))"`
-4. Check browser developer tools for third-party network requests; verify all required UI assets load.
-5. Run backup and restore into a new directory; verify synthetic account and document bytes.
-6. Stop/start the worker and confirm queued maintenance jobs survive.
-
-No physical Mac/container isolation verification has been claimed. See `VALIDATION.md` for checks completed in the development workspace.
+This leaves the trial volume for inspection and does not replace the live volume. Switching a restored volume into production is not covered by these trial commands.

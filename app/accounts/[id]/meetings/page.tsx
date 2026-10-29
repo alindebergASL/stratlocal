@@ -1,3 +1,4 @@
+import { localOnly } from "@/lib/localMode";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { requirePageUser } from "@/lib/auth";
@@ -48,6 +49,7 @@ export default async function AccountMeetingsPage({ params, searchParams }: { pa
       <Section id="meetings" title="Meetings" aside={<span>{meetings.length}</span>}>
         <div id="meeting-new" className="mb-4">
           <MeetingNew
+            allowAi={!localOnly()}
             compact={meetings.length === 0}
             accountId={id}
             action={createMeeting.bind(null, id)}

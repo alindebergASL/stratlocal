@@ -558,7 +558,7 @@ export function createProposalBatch(
   accountId: string,
   origin: BatchOrigin,
   drafts: ProposalDraft[],
-  opts: { baseline?: Baseline } = {},
+  opts: { baseline?: Baseline; deduplicatePending?: boolean } = {},
 ): { batchId: string; ids: string[]; kept: number[] } {
   const conn = db();
   const batchId = newId();
@@ -595,6 +595,13 @@ export function createProposalBatch(
       }
       // Someone already said no to exactly this change; do not ask again.
       if (previouslyRejected.get(accountId, d.entity_type, d.op, d.entity_id ?? null, JSON.stringify(payload))) continue;
+      // A retried local JSON upload must not create a second accept button
+      // for the same change. Keep this within the insertion transaction.
+      if (opts.deduplicatePending && conn.prepare(
+        `SELECT 1 FROM proposals WHERE account_id = ? AND origin_kind = ? AND origin_id = ?
+         AND status = 'pending' AND entity_type = ? AND op = ?
+         AND COALESCE(entity_id, '') = COALESCE(?, '') AND payload_json = ? LIMIT 1`,
+      ).get(accountId, origin.kind, origin.id, d.entity_type, d.op, d.entity_id ?? null, JSON.stringify(payload))) continue;
       if (
         origin.id === "research_updates" &&
         conn
