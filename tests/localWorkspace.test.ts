@@ -81,6 +81,21 @@ async function bundle(
 }
 const count = (table: string) =>
   (db().prepare(`SELECT count(*) n FROM ${table}`).get() as { n: number }).n;
+it("explains how to import raw Salesforce JSON without creating account changes", async () => {
+  const a = seedAccount();
+  const before = count("deals");
+  const p = stagePackage(
+    "Synthetic_Salesforce_Records.json",
+    Buffer.from(JSON.stringify({ records: [{ Id: "SYN-001", Name: "Synthetic Orchard Lab" }] })),
+    USER,
+    a.accountId,
+  );
+  await expect(parsePackage(p.id, a.accountId)).rejects.toThrow(
+    /import the complete response ZIP with manifest.json at its root/,
+  );
+  expect(count("deals")).toBe(before);
+  expect(count("local_account_mappings")).toBe(0);
+});
 it("preserves originals and creates review proposals without changing the account", async () => {
   const a = seedAccount();
   const bytes = await bundle({

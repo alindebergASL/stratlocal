@@ -34,6 +34,8 @@ A standalone [Markdown prompt template](MyAgent_StrategyLocal_Account_Package_Pr
 
 ## Package contract (version 1)
 
+If a Salesforce records JSON fails with **Account account needs account.name** (or the newer explanatory message), check which file you selected. A raw records export such as `Iowa_Salesforce_Records.json` is evidence inside the response package, not necessarily a structured account report. Import the complete response ZIP with `manifest.json` at its root and all referenced evidence files. If MyAgent supplied only separate files, ask it to assemble the response ZIP according to the intake prompt, with the exact saved account name in `accounts[].report.account.name`. Do not simply rename Salesforce `Name` fields or add a guessed identity to bypass account matching. A standalone structured report uses `account.name` at its root; the actual JSON must be inspected to determine whether it matches that contract.
+
 A ZIP contains root `manifest.json` and source files at the paths it names. JSON-only single-account reports also work. PDF, PPTX, DOCX, HTML, Markdown, and text originals can be imported as reference evidence. PPTX extraction includes slide order and speaker notes; PDF extraction cites pages. OCR and full deck generation are not included.
 
 ```json

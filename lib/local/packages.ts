@@ -259,7 +259,12 @@ export async function parsePackage(
       | { name?: unknown; crm_id?: unknown }
       | undefined;
     if (typeof a?.name !== "string" || !a.name.trim())
-      throw new Error(`Account ${item.key} needs account.name`);
+      throw new Error(
+        `Account ${item.key} is missing a nonempty account.name in its report. ` +
+          `Standalone JSON must be a StrategyLocal account report, not a raw Salesforce records export. ` +
+          `For MyAgent intake, import the complete response ZIP with manifest.json at its root and the referenced evidence files inside. ` +
+          `Ask MyAgent to put the exact saved account name in accounts[].report.account.name; do not rename or invent Salesforce fields to bypass this check.`,
+      );
     if (a.crm_id != null && typeof a.crm_id !== "string")
       throw new Error("CRM identifiers must be strings");
     const extracted = jsonExtraction(JSON.stringify(item.report), a.name);
