@@ -6,6 +6,6 @@ For an existing installation, use [update and verify](deploy/local/README.md#upd
 
 If the app is healthy but the browser cannot connect, follow [the port check and temporary gateway workaround](deploy/local/README.md#browser-connection-workaround). Keep an existing temporary gateway running when updating this build.
 
-The implementation is on the `codex/local-workspace` branch. No Bedrock, AWS, or MyAgent API credentials are required. External AI remains disabled by default.
+The implementation is published on the `main` branch. No Bedrock, AWS, or MyAgent API credentials are required. External AI remains disabled by default.
 
 [Optional exchange-folder and local-model setup](docs/local-model-setup.md) is separate from the base installation. Follow its checks before enabling an option. Native Apple inference, Keychain, and Docker Desktop-to-Mac connectivity have not been verified on a physical Mac. See [validation evidence](deploy/local/VALIDATION.md).

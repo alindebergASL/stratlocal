@@ -34,27 +34,27 @@ The Compose configuration caps the app at 3,500 MiB and the maintenance worker a
 
 ## 2. Get the correct source
 
-The implemented workspace is on `codex/local-workspace`; do not assume it is on `main`.
+The implemented workspace is published on `main`. Use that branch for new installations and updates.
 
 For a new checkout, run from a directory where you want the project stored:
 
 ```sh
-git clone --branch codex/local-workspace https://github.com/alindebergASL/stratlocal.git
+git clone --branch main https://github.com/alindebergASL/stratlocal.git
 cd stratlocal
 git branch --show-current
 test -f deploy/local/compose.yaml && test -f docs/local-workspace.md
 ```
 
-Expected branch: `codex/local-workspace`; the last command must exit successfully. If GitHub denies access, sign in to an account with access to this repository or download this branch's ZIP from GitHub. For a ZIP download, open Terminal in the extracted directory containing `package.json` and `deploy/local/compose.yaml`; its directory name is not assumed.
+Expected branch: `main`; the last command must exit successfully. If GitHub denies access, sign in to an account with access to this repository or download this branch's ZIP from GitHub. For a ZIP download, open Terminal in the extracted directory containing `package.json` and `deploy/local/compose.yaml`; its directory name is not assumed.
 
 If you already have a checkout or data, **do not re-run initialization over existing files**. Inspect `git status`, back up the existing installation using the Backup section, and keep its `.env`, password, and data volume. The following initialization block deliberately refuses to overwrite local configuration.
 
 For an existing Git checkout with a clean working tree, after backing up:
 
 ```sh
-git fetch origin codex/local-workspace
-git switch codex/local-workspace
-git pull --ff-only origin codex/local-workspace
+git fetch origin main
+git switch main
+git pull --ff-only origin main
 ```
 
 Stop if Git reports local changes, a conflict, or divergent history; do not use reset/force commands to get past it. Skip initialization and continue at step 4 with your existing local configuration. An existing ZIP-based installation needs a separate new extraction and deliberate transfer of local configuration; these Git commands do not apply to it.
@@ -138,8 +138,8 @@ Continue with [the first workflow](../../docs/local-workspace.md#first-workflow)
 First run the [backup](#backup) and check `git status --short`. Stop if it reports local changes. Keep the existing `.env`, password, and data volume. For the base installation, run these commands separately from the repository root and stop on any failure:
 
 ```sh
-git switch codex/local-workspace
-git pull --ff-only origin codex/local-workspace
+git switch main
+git pull --ff-only origin main
 docker compose -p strategylocal -f deploy/local/compose.yaml --env-file deploy/local/.env config --quiet
 docker compose -p strategylocal -f deploy/local/compose.yaml --env-file deploy/local/.env up -d --build
 docker compose -p strategylocal -f deploy/local/compose.yaml --env-file deploy/local/.env ps
