@@ -1,5 +1,13 @@
 # Validation
 
+## Deployment readiness and research coverage — 2026-10-29
+
+- Production build/TypeScript, 38 focused Vitest tests, and six gateway/setup/snapshot Node tests pass. Coverage includes partial versus unknown research coverage, mismatched source identities, changed deal identifiers, explicit distinct-deal confirmation, forwarding request bodies/cookies/Origin, draining a 2 MB download, and backup/restore behavior.
+- Chromium passes the fresh-account workflow, accepted overview/People records, the new coverage panel, and preparing a follow-up MyAgent request for research gaps. Changed-ID protection is also tested against an existing account.
+- Docker Engine 28.4: disposable containers verified the fixed gateway across an internal app network and browser bridge. A probe to the published loopback port verified POST data, Origin, and cookies. The upstream app had only its internal network and no published host port. Test resources were removed afterward.
+- Compose v2.40.3 validates base, exchange-only, models-only, combined, and restore configurations. App stays internal; web alone publishes loopback and has no data or secret mounts. The restored app gets a separate web gateway on port 3001.
+- Docker networking was tested with a synthetic HTTP upstream. The production application was built and browser-tested outside Docker; the complete production Docker image build and physical-Mac migration have not been rerun here. Follow the installation checks, including the temporary-gateway migration, on the deployment machine.
+
 ## Flexible imports
 
 - Production build/TypeScript and 33 focused normalization, account-context, workspace, and intake tests pass. Tests cover unique heading/exact-quote resolution, ambiguous and mismatched citations, descriptive contact roles, email omission, and owner-scoped retry of failed imports.

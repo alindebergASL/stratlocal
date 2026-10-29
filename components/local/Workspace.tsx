@@ -17,7 +17,8 @@ import {
   type PackageRow,
   type Artifact,
 } from "@/lib/local/store";
-import { type PackageManifest } from "@/lib/local/packages";
+import { type PackageManifest, reviewAccountReadiness } from "@/lib/local/packages";
+import { changedDealIds } from "@/lib/local/readiness";
 import {
   capabilities,
   type DraftInput,
@@ -303,6 +304,8 @@ export async function ImportPage({ id }: { id: string }) {
             name: string;
             crm_id?: string;
           };
+          const readiness = reviewAccountReadiness(a, paths);
+          const lookalikes = mapping ? changedDealIds(a.report, db().prepare("SELECT deal_id,name FROM deals WHERE account_id=?").all(mapping.account_id) as {deal_id:string;name:string}[]) : [];
           return (
             <section className={card} key={a.key}>
               <h2 className="text-lead">{identity.name}</h2>
@@ -328,6 +331,19 @@ export async function ImportPage({ id }: { id: string }) {
                 </label>
               </LocalForm>
               <ImportReportDetails report={a.report} />
+              <section className="rounded border border-line p-4 space-y-3">
+                <h3 className="font-semibold">Research coverage & next steps</h3>
+                <p>Overview: {readiness.summary ? "supplied" : "not supplied"} · Customer contacts in report: {readiness.contacts} · Structured deals: {readiness.deals} · Reported open-opportunity total: {readiness.reportedTotal ?? "unknown"}</p>
+                <p className="text-label">These counts describe the package. They do not verify research accuracy, completeness, or customer confirmation.</p>
+                {readiness.warnings.map((w,i)=><p key={i} className="text-label">{w}</p>)}
+                {!!lookalikes.length && <div role="alert"><p className="font-semibold">Possible duplicate opportunities</p><ul className="list-disc pl-5">{lookalikes.map((d,i)=><li key={i}>{d.name}: incoming ID {d.incomingId}, existing ID {d.existingId}. These may be the same opportunity with changed identifiers.</li>)}</ul></div>}
+                {!!readiness.gaps.length && <ul className="list-disc pl-5">{readiness.gaps.map((g,i)=><li key={i}>{g}</li>)}</ul>}
+                {mapping && !!readiness.gaps.length && <LocalForm operation="prepare_intake_request" label="Prepare MyAgent follow-up for gaps">
+                  <Hidden name="accountId" value={mapping.account_id} />
+                  <label className="block">Research to complete<textarea className={field} name="question" maxLength={8000} defaultValue={`Follow up on this imported package. Preserve verified account and deal identifiers. Do not silently replace IDs.\n\n${readiness.gaps.join("\n\n")}`} /></label>
+                  <p className="text-label">Prepares a local prompt with the full intake instructions. Attach relevant originals manually when handing it to MyAgent.</p>
+                </LocalForm>}
+              </section>
               <details>
                 <summary>Reported account data</summary>
                 <pre className="overflow-auto whitespace-pre-wrap text-micro">
@@ -355,6 +371,7 @@ export async function ImportPage({ id }: { id: string }) {
             </p>
             <LocalForm operation="propose_package" label="Prepare proposals">
               <Hidden name="packageId" value={id} />
+              <label className="block"><input type="checkbox" name="confirmDistinctDeals" /> I reviewed any same-named deals with different IDs and confirm they are distinct opportunities. Leave unchecked unless that is verified.</label>
             </LocalForm>
             {p.state === "proposed" && <LocalForm operation="propose_account_context" label="Prepare overview & people proposals">
               <Hidden name="packageId" value={id} />

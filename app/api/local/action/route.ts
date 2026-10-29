@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
           break;
         case "propose_package":
           result = {
-            ...proposePackage(text("packageId", 100), user.id),
+            ...proposePackage(text("packageId", 100), user.id, flag("confirmDistinctDeals")),
             message:
               "Proposals are ready for review. Account records have not been changed.",
             href: "/inbox?kind=changes",

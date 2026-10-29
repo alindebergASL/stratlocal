@@ -1,6 +1,7 @@
 import { intakeManifest, intakePrompt } from "./intake";
 import { contextDrafts, contextSources } from "./accountContext";
 import { normalizeSourceLocation } from "./normalize";
+import { accountReadiness, changedDealIds } from "./readiness";
 import fs from "node:fs";
 import path from "node:path";
 import { createHash } from "node:crypto";
@@ -99,6 +100,13 @@ export const PackageManifest = z
   })
   .strict();
 export type PackageManifest = z.infer<typeof PackageManifest>;
+export function reviewAccountReadiness(item: PackageManifest["accounts"][number], paths: Record<string, string>) {
+  return accountReadiness(item.report, item.sources.filter(s => /\.json$/i.test(s.path)).map(s => {
+    const a = artifact(paths[s.path] ?? "");
+    try { return {path:s.path,value:a ? JSON.parse(fs.readFileSync(a.storage_path,"utf8")) : null}; }
+    catch { return {path:s.path,value:null}; }
+  }));
+}
 export function stagePackage(
   filename: string,
   bytes: Buffer,
@@ -271,6 +279,11 @@ export async function parsePackage(
       throw new Error(`Source quotation was not found in ${s.path}`);
   }
   for (const item of manifest.accounts) {
+    const evidence = item.sources.filter(s => /\.json$/i.test(s.path)).map(s => {
+      try { return { path: s.path, value: JSON.parse(entries.get(s.path)!.toString("utf8")) }; }
+      catch { return { path: s.path, value: null }; }
+    });
+    warnings.push(...accountReadiness(item.report, evidence).warnings);
     const a = item.report.account as
       | { name?: unknown; crm_id?: unknown }
       | undefined;
@@ -394,7 +407,7 @@ export function resolveAccount(
         );
   })();
 }
-export function proposePackage(id: string, userId: string) {
+export function proposePackage(id: string, userId: string, confirmDistinctDeals = false) {
   const p = packageRow(id);
   if (!p?.manifest_json || !["review", "proposed"].includes(p.state))
     throw new Error("Package not ready");
@@ -438,6 +451,8 @@ export function proposePackage(id: string, userId: string) {
             .get(identity.crm_id.trim(), a.id) as { name: string } | undefined)
         : undefined;
       assertImportAccountIdentity(identity, a, other?.name);
+      const lookalikes = changedDealIds(item.report, listDeals(a.id, { includeArchived: true }));
+      if (lookalikes.length && !confirmDistinctDeals) throw new Error(`Review possible duplicate deals before preparing proposals: ${lookalikes.map(d => `${d.name} (incoming ${d.incomingId}, existing ${d.existingId})`).join("; ")}. Correct reused identifiers, or confirm these are genuinely distinct opportunities on the import page.`);
       mapped.set(item.key, a.id);
       const sources = item.sources.length
         ? item.sources

@@ -40,6 +40,12 @@ A standalone [Markdown prompt template](MyAgent_StrategyLocal_Account_Package_Pr
 
 ## Package contract (version 1)
 
+### Coverage and duplicate-deal review
+
+Each mapped account's import review shows a **Research coverage & next steps** panel. It compares the number of structured deals with identity-matched JSON evidence containing `pipeline_telemetry.total_open_pipeline_opportunities_count` or `coverage.opportunities.total_matching`. A mismatch is visible as partial or conflicting coverage; an absent total remains unknown. Reported totals are not independently verified, and monetary amounts are not converted into account metrics. **Prepare MyAgent follow-up for gaps** creates an editable local request with the full intake instructions. Hand it and relevant originals to MyAgent yourself.
+
+If an incoming deal has a different identifier but the same normalized name as an existing deal (including archived deals), proposal preparation stops before changing anything. The review lists both identifiers. Correct mistaken IDs, or explicitly check the distinct-opportunities confirmation only when these truly are separate opportunities. The app never merges them by name. This check does not detect every renamed or similarly named duplicate, so review changed identifiers carefully.
+
 ### Flexible input handling
 
 The importer resolves noncanonical source locations when a unique extracted heading or an exact quotation identifies a section. The saved review manifest records the resolved location and a warning explains the adjustment; original file bytes remain unchanged. Ambiguous locations and quotations absent from the source still block import. An explicit canonical location with a mismatched quotation is not silently redirected.

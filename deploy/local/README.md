@@ -30,7 +30,7 @@ docker info --format '{{.NCPU}}'
 
 The app defaults to a 2-CPU limit; the maintenance worker has a 1-CPU limit. These are per-container ceilings, not dedicated CPU reservations. If the engine reports only 1 CPU, set `APP_CPU_LIMIT=1` in `deploy/local/.env`. Any custom `APP_CPU_LIMIT` must not exceed the reported count. The earlier hardcoded 4-CPU app limit prevented container creation on 2-CPU Docker Desktop installations; updating the checkout fixes that default without rebuilding the image.
 
-The Compose configuration caps the app at 3,500 MiB and the maintenance worker at 512 MiB; build memory needs are not measured. If Docker reports out-of-memory errors, stop and check its resource allocation.
+The Compose configuration caps the app at 3,500 MiB and the maintenance worker at 512 MiB, and the browser gateway at 128 MiB; build memory needs are not measured. If Docker reports out-of-memory errors, stop and check its resource allocation.
 
 ## 2. Get the correct source
 
@@ -109,19 +109,19 @@ Each command must succeed. The last should print `Password readable; data direct
 ```sh
 docker compose -p strategylocal -f deploy/local/compose.yaml --env-file deploy/local/.env up -d
 docker compose -p strategylocal -f deploy/local/compose.yaml --env-file deploy/local/.env ps
-docker compose -p strategylocal -f deploy/local/compose.yaml --env-file deploy/local/.env logs --tail=60 app worker
+docker compose -p strategylocal -f deploy/local/compose.yaml --env-file deploy/local/.env logs --tail=60 app web worker
 ```
 
-The app must become **healthy**, and the worker must be running. Health checks run every 30 seconds; repeat `ps` if it still says `starting`. A restarting/unhealthy container is a failure, not a completed installation. Logs may contain customer filenames or other local information; redact them before sharing.
+Both app and web must become **healthy**, and the worker must be running. If upgrading an installation with the temporary gateway, complete [the gateway migration](#migrate-the-temporary-gateway) before this startup step. Health checks run every 30 seconds; repeat `ps` if it still says `starting`. A restarting/unhealthy container is a failure, not a completed installation. Logs may contain customer filenames or other local information; redact them before sharing.
 
 Verify browser access separately from container health:
 
 ```sh
-docker compose -p strategylocal -f deploy/local/compose.yaml --env-file deploy/local/.env port app 3000
+docker compose -p strategylocal -f deploy/local/compose.yaml --env-file deploy/local/.env port web 3000
 curl --noproxy '*' --fail --show-error --output /dev/null --write-out 'HTTP %{http_code}\n' --connect-timeout 5 http://127.0.0.1:3000/login
 ```
 
-Normally the first command prints `127.0.0.1:3000` and the second reports HTTP 200. A healthy app with only `3000/tcp` in `ps`, `invalid IP:0`, or connection refused has not passed this check. Follow [the browser connection workaround](#browser-connection-workaround) below. If you already use the temporary gateway, the app's port command can still fail; verify the gateway port and HTTP response instead.
+The first command must print `127.0.0.1:3000` and the second must report HTTP 200. The `web` service publishes the port; app intentionally has no host port. A healthy app alone is insufficient. If either check fails, inspect `logs --tail=60 app web worker` and confirm port 3000 is not occupied by the old temporary gateway or another process.
 
 Open **http://127.0.0.1:3000**, sign in with the email from `.env` and the password from step 3. Expect the Accounts page. Create a clearly named test account, then run:
 
@@ -141,57 +141,53 @@ First run the [backup](#backup) and check `git status --short`. Stop if it repor
 git switch main
 git pull --ff-only origin main
 docker compose -p strategylocal -f deploy/local/compose.yaml --env-file deploy/local/.env config --quiet
-docker compose -p strategylocal -f deploy/local/compose.yaml --env-file deploy/local/.env up -d --build
+docker compose -p strategylocal -f deploy/local/compose.yaml --env-file deploy/local/.env build app
+# If the temporary gateway exists, stop it only after the build succeeds:
+if docker container inspect strategylocal-web-hotfix >/dev/null 2>&1; then
+  docker stop strategylocal-web-hotfix
+fi
+docker compose -p strategylocal -f deploy/local/compose.yaml --env-file deploy/local/.env up -d
 docker compose -p strategylocal -f deploy/local/compose.yaml --env-file deploy/local/.env ps
 ```
 
-If models or the exchange folder are enabled, use [your complete optional Compose file combination](../../docs/local-model-setup.md) for `config` and `up`, preserving those options. Keep `strategylocal-web-hotfix` running if your installation uses it; it is outside Compose and is still needed by this build.
+If models or the exchange folder are enabled, use [your complete optional Compose file combination](../../docs/local-model-setup.md) for `config` and `up`, preserving those options. This build includes the permanent `web` gateway. Stop the temporary `strategylocal-web-hotfix` container before starting `web` so port 3000 is available; see the migration section below. Never run both gateways on that port.
 
 Repeat the HTTP check in step 5, then refresh the browser. Open an account → **Evidence & MyAgent** and scroll to the bottom. Expect **Prepare a MyAgent request for new account intake**. Prepare a request without selecting evidence and verify **Download prompt (.md)** appears on its review page. This prepares files locally; it does not contact MyAgent or Salesforce. Follow [the intake instructions](../../docs/local-workspace.md#new-account-intake-request) for the complete handoff and import.
 
 The account overview now includes general account information and linked research. This update adds a separate researched-summary database column; keep the pre-update backup. For an existing imported package, use **Prepare overview & people proposals** on the overview or import page, then review and accept the proposed customer contacts. Older packages lacking `report.account.summary` show their original briefing but need an updated MyAgent package to populate the accepted summary. Prepare a new intake request for the current summary/contact instructions.
 
-## Browser connection workaround
+## Migrate the temporary gateway
 
-Some Docker engines do not publish the app's port from its internal-only network. The base Compose file still uses that network. This temporary fixed-destination TCP gateway is the workaround used by the current installation; it is not yet part of Compose.
+New installations use the Compose-managed `web` service automatically and do not need a hotfix container. The app stays on an internal-only network; web joins that network and a browser bridge, publishing only `127.0.0.1:3000`. It forwards TCP to the fixed destination `app:3000`, preserving browser headers and streaming uploads. It has no database, original-file volume, or bootstrap secret mounted.
 
-Use it only when the app is healthy but the HTTP check fails and no host port is published. Verify the expected app container and network exist:
-
-```sh
-docker inspect --format '{{.State.Health.Status}}' strategylocal-app-1
-docker network inspect strategylocal_offline --format '{{.Internal}}'
-docker ps -a --filter name=strategylocal-web-hotfix --format '{{.Names}} {{.Status}} {{.Ports}}'
-```
-
-The first two results must be `healthy` and `true`. If the gateway already exists, use `docker start strategylocal-web-hotfix` and skip creation. If it does not exist, run each command below separately, stopping on failure:
+For an existing installation, follow **Update an existing installation** above: back up, pull, validate, build the new app image, stop the old gateway if present, then start Compose. Keep the stopped old gateway available until these checks pass:
 
 ```sh
-docker create --name strategylocal-web-hotfix \
-  --restart unless-stopped --network bridge \
-  -p 127.0.0.1:3000:3000 --read-only --cap-drop ALL \
-  --user 10001:10001 --no-healthcheck \
-  --entrypoint node strategylocal-app \
-  -e 'const net=require("node:net"); net.createServer(client=>{const upstream=net.connect(3000,"strategylocal-app-1"); client.pipe(upstream); upstream.pipe(client); client.on("error",()=>upstream.destroy()); upstream.on("error",()=>client.destroy());}).listen(3000,"0.0.0.0");'
-docker network connect strategylocal_offline strategylocal-web-hotfix
-docker start strategylocal-web-hotfix
-```
-
-Verify the gateway and browser endpoint:
-
-```sh
-docker port strategylocal-web-hotfix 3000
+docker compose -p strategylocal -f deploy/local/compose.yaml --env-file deploy/local/.env ps
+docker compose -p strategylocal -f deploy/local/compose.yaml --env-file deploy/local/.env port web 3000
 curl --noproxy '*' --fail --show-error --output /dev/null --write-out 'HTTP %{http_code}\n' --connect-timeout 5 http://127.0.0.1:3000/login
 ```
 
-Expect `127.0.0.1:3000` and HTTP 200. If port 3000 is already allocated, stop and inspect `docker ps` and `lsof -nP -iTCP:3000 -sTCP:LISTEN`; do not delete an unrelated container or process. If the gateway starts but HTTP fails, inspect `docker logs --tail=60 strategylocal-web-hotfix` and the app logs before continuing.
+Expect app/web healthy, worker running, `127.0.0.1:3000`, and HTTP 200. Sign in and check an existing account and an original download. Then, only if you previously had the temporary container, remove the stopped helper:
 
-The gateway joins the default bridge and the app's internal network, forwarding TCP only to `strategylocal-app-1:3000`. It has no data-volume mount; the app remains on its internal network. Keep it running across app updates. Because Compose does not manage it, stop it separately with `docker stop strategylocal-web-hotfix` when shutting down the installation. If the offline network is removed and recreated, its gateway attachment must also be restored before use.
+```sh
+docker rm strategylocal-web-hotfix
+```
+
+If the new gateway fails, keep the old container and inspect `logs --tail=60 web app`. To restore browser access while diagnosing, stop the new web service before starting the old helper:
+
+```sh
+docker compose -p strategylocal -f deploy/local/compose.yaml --env-file deploy/local/.env stop web
+docker start strategylocal-web-hotfix
+```
+
+This fallback requires the old helper still to exist and remain attached to `strategylocal_offline`. It does not roll back the app or database. Do not remove the network or data volume. A port conflict should be investigated with `docker ps` and `lsof -nP -iTCP:3000 -sTCP:LISTEN`, not by deleting unrelated processes.
 
 ## Optional features
 
 Follow the complete instructions in [optional Mac setup](../../docs/local-model-setup.md) for the exchange folder, Ollama, or Apple models. The guide includes a combined Compose command; running a base-only `up` after adding options can remove those options from recreated containers.
 
-The base app has an internal Docker network; the maintenance worker has no network. The optional model gateway has a second network and forwards fixed authenticated operations to the Mac helper. Runtime isolation on a physical Mac still needs testing. A failed external HTTP request alone does not prove complete isolation; DNS, certificates, or the destination could also cause failure.
+The base app has an internal Docker network; the maintenance worker has no network. The web gateway alone bridges browser access to the app and has no data or secret mounts. The optional model gateway has a second network and forwards fixed authenticated operations to the Mac helper. Runtime isolation on a physical Mac still needs testing. A failed external HTTP request alone does not prove complete isolation; DNS, certificates, or the destination could also cause failure.
 
 ## Backup
 
@@ -229,7 +225,7 @@ docker compose -p strategylocal-restore -f deploy/local/restore-test.yaml --env-
 docker compose -p strategylocal-restore -f deploy/local/restore-test.yaml --env-file deploy/local/.env ps
 ```
 
-If the copy command fails, stop; the volume may contain an earlier trial. Do not delete it without inspecting it. Once healthy, check `curl --noproxy '*' --fail --show-error --output /dev/null --write-out 'HTTP %{http_code}\n' --connect-timeout 5 http://127.0.0.1:3001/login` before visiting **http://127.0.0.1:3001**, using the login stored in the backup. The restore trial also uses an internal-only network and can encounter the same port-publication problem. The live gateway on port 3000 does not forward to the trial: if port 3001 fails, stop and treat browser restore validation as incomplete. Do not point the live gateway at the trial. Confirm the test account and download an imported original to check its contents. The startup script still needs a readable bootstrap file even though the database already contains users. The trial has no model/exchange override; new model tasks cannot run there.
+If the copy command fails, stop; the volume may contain an earlier trial. Do not delete it without inspecting it. Once healthy, check `curl --noproxy '*' --fail --show-error --output /dev/null --write-out 'HTTP %{http_code}\n' --connect-timeout 5 http://127.0.0.1:3001/login` before visiting **http://127.0.0.1:3001**, using the login stored in the backup. The restore trial has its own web gateway publishing port 3001. Require both trial app and web to become healthy. If port 3001 fails, inspect the trial web/app logs and treat browser restore validation as incomplete; do not point the live gateway at the trial. Confirm the test account and download an imported original to check its contents. The startup script still needs a readable bootstrap file even though the database already contains users. The trial has no model/exchange override; new model tasks cannot run there.
 
 Stop the trial after inspection:
 

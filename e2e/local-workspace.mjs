@@ -188,6 +188,12 @@ try {
   await preview.locator("summary").click();
   assert.match(await preview.innerText(), /Synthetic customer evidence/);
   await preview.getByRole("link", { name: "Download original", exact: true }).waitFor();
+  await page.getByRole("heading", { name: "Research coverage & next steps" }).waitFor();
+  const importReviewUrl = page.url();
+  await page.getByRole("button", { name: "Prepare MyAgent follow-up for gaps" }).click();
+  await page.waitForURL(/\/requests\//);
+  assert.match(await page.locator("pre").innerText(), /coverage ledger/);
+  await page.goto(importReviewUrl);
   await page.getByRole("button", { name: "Confirm account mapping" }).click();
   await page.getByRole("button", { name: "Prepare proposals" }).click();
   await page.waitForURL(/\/inbox/);

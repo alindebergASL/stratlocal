@@ -2,7 +2,6 @@ name: strategylocal-restore
 services:
   app:
     image: strategylocal-app
-    ports: ["127.0.0.1:3001:3000"]
     environment:
       STRATEGY_LOCAL_ONLY: "1"
       DB_PATH: /app/data/strategy.sqlite
@@ -17,6 +16,19 @@ services:
       - /tmp:rw,nosuid,nodev,size=256m
       - /app/.next/cache:rw,nosuid,nodev,uid=10001,gid=10001,size=256m
     mem_limit: 3500m
+  web:
+    image: strategylocal-app
+    entrypoint: ["node", "/app/web-gateway.mjs"]
+    depends_on:
+      app:
+        condition: service_healthy
+    ports: ["127.0.0.1:3001:3000"]
+    networks: [offline, browser]
+    mem_limit: 128m
+    pids_limit: 64
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
 secrets:
   bootstrap_password:
     file: ${BOOTSTRAP_PASSWORD_FILE:-./bootstrap-password.txt}
@@ -25,5 +37,6 @@ volumes:
     external: true
     name: strategylocal_restore_test
 networks:
+  browser: {}
   offline:
     internal: true

@@ -15,6 +15,7 @@ COPY --from=build /app/.next/static ./.next/static
 COPY deploy/local/start.mjs ./local-start.mjs
 COPY deploy/local/snapshot.mjs ./snapshot.mjs
 COPY deploy/local/jobs.mjs deploy/local/worker.mjs ./
+COPY --chmod=444 deploy/local/web-gateway.mjs ./web-gateway.mjs
 RUN useradd --uid 10001 --create-home app && mkdir -p /app/data/docs /app/.next/cache && chown -R app:app /app/data /app/.next/cache
 USER app
 EXPOSE 3000
