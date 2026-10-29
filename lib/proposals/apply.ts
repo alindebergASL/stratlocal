@@ -3,8 +3,9 @@
 // fields that actually differ, and records one change_log row per field.
 import { z } from "zod";
 import type Database from "better-sqlite3";
-import { db, type ProposalRow, OWN_WORK_ACCOUNT_ID } from "../db";
+import { db, type ProposalRow, type ContactRow, OWN_WORK_ACCOUNT_ID } from "../db";
 import { newId, newLocalDealId } from "../ids";
+import { matchContact } from "../matchContact";
 import { todayISO } from "../clock";
 import { fiscalQuarter } from "../fiscal";
 import { sizeMarker } from "../format";
@@ -722,6 +723,27 @@ export function acceptProposal(id: string, userId: string, review: { ackEvidence
         throw new ApplyError("Matching record already exists; review a fresh proposal", "conflict");
     }
     const nowMs = Date.now();
+
+    // Different MyAgent packages can be reviewed before either one's creates
+    // are accepted. Recheck identity at acceptance, when the first package or
+    // a manual edit may already have added this record. Keep distinct people
+    // with different supplied email addresses distinct, as import matching does.
+    if (p.op === "create" && p.origin_kind === "import" &&
+        (p.entity_type === "contact" || p.entity_type === "play") &&
+        conn.prepare("SELECT 1 FROM local_packages WHERE id=?").get(p.origin_id)) {
+      let existingName: string | undefined;
+      if (p.entity_type === "contact" && typeof payload.name === "string") {
+        const contacts = conn.prepare("SELECT * FROM contacts WHERE account_id=?").all(p.account_id) as ContactRow[];
+        existingName = matchContact(contacts, { name: payload.name, email: typeof payload.email === "string" ? payload.email : null })?.row.name;
+      } else if (p.entity_type === "play" && typeof payload.title === "string") {
+        const existing = conn.prepare("SELECT title FROM plays WHERE account_id=? AND lower(trim(title))=lower(trim(?)) LIMIT 1").get(p.account_id, payload.title) as { title: string } | undefined;
+        existingName = existing?.title;
+      }
+      if (existingName) {
+        conn.prepare("UPDATE proposals SET status='conflict',decided_by=?,decided_at=? WHERE id=?").run(userId, nowMs, id);
+        return { status: "conflict", message: `The ${p.entity_type} “${existingName}” already exists on this account. Review and update the existing record (or restore it if archived); no duplicate was created.` };
+      }
+    }
 
     // The record's lifecycle is checked here, at the moment of accepting, not
     // left to applyEntityChange — whose archived guard runs only for a form

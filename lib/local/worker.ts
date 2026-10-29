@@ -48,17 +48,6 @@ export async function processNext(owner = randomUUID()) {
     finish(task.id, owner, result);
   } catch (e) {
     const error = e instanceof Error ? e.message : "Task failed";
-    if (task.kind === "import") {
-      const current = db()
-        .prepare("SELECT owner,lease_until FROM local_jobs WHERE id=?")
-        .get(task.id) as { owner: string; lease_until: number };
-      if (current.owner === owner && current.lease_until > Date.now())
-        db()
-          .prepare(
-            "UPDATE local_packages SET state='failed',error=? WHERE id=? AND state='queued'",
-          )
-          .run(error, JSON.parse(task.payload_json).packageId);
-    }
     finish(task.id, owner, null, error);
   } finally {
     clearInterval(timer);

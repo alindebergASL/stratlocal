@@ -2,6 +2,20 @@ import { db } from "../db";
 import { newId } from "../ids";
 import { job, type Job } from "./store";
 
+// A terminal import task and its package must agree. This also repairs imports
+// cancelled or abandoned by older workers, without changing a parsed package.
+function syncTerminalImports() {
+  db().prepare(`
+    UPDATE local_packages
+    SET state = (SELECT status FROM local_jobs WHERE request_key='import:' || local_packages.id AND kind='import'),
+        error = (SELECT error FROM local_jobs WHERE request_key='import:' || local_packages.id AND kind='import')
+    WHERE state IN ('queued','failed','cancelled')
+      AND EXISTS (SELECT 1 FROM local_jobs WHERE request_key='import:' || local_packages.id
+        AND kind='import' AND status IN ('failed','cancelled')
+        AND (local_packages.state != local_jobs.status OR local_packages.error IS NOT local_jobs.error))
+  `).run();
+}
+
 export function enqueue(
   kind: "import" | "draft",
   requestKey: string,
@@ -37,14 +51,15 @@ export function claim(owner: string, now = Date.now()): Job | null {
     .transaction(() => {
       db()
         .prepare(
-          "UPDATE local_jobs SET status='cancelled',progress='Cancelled',updated_at=? WHERE cancel_requested=1 AND (status='queued' OR (status='running' AND lease_until<=?))",
+          "UPDATE local_jobs SET status='cancelled',progress='Cancelled',owner=NULL,lease_until=NULL,updated_at=? WHERE cancel_requested=1 AND (status='queued' OR (status='running' AND lease_until<=?))",
         )
         .run(now, now);
       db()
         .prepare(
-          "UPDATE local_jobs SET status='failed',error='Interrupted three times; inspect the source before retrying.',updated_at=? WHERE status='running' AND lease_until<=? AND attempts>=3",
+          "UPDATE local_jobs SET status='failed',progress='Interrupted',error='Interrupted three times; inspect the source before retrying.',owner=NULL,lease_until=NULL,updated_at=? WHERE status='running' AND lease_until<=? AND attempts>=3",
         )
         .run(now, now);
+      syncTerminalImports();
       if (
         db()
           .prepare(
@@ -98,24 +113,30 @@ export function finish(
   result: unknown,
   error?: string,
 ) {
-  db()
-    .prepare(
-      "UPDATE local_jobs SET status=CASE WHEN cancel_requested=1 THEN 'cancelled' WHEN ? IS NOT NULL THEN 'failed' ELSE 'done' END,progress='Finished',result_json=?,error=?,lease_until=NULL,updated_at=? WHERE id=? AND owner=? AND status='running' AND lease_until>?",
-    )
-    .run(
-      error ?? null,
-      JSON.stringify(result),
-      error ?? null,
-      Date.now(),
-      id,
-      owner,
-      Date.now(),
-    );
+  db().transaction(() => {
+    const changed = db()
+      .prepare(
+        "UPDATE local_jobs SET status=CASE WHEN cancel_requested=1 THEN 'cancelled' WHEN ? IS NOT NULL THEN 'failed' ELSE 'done' END,progress=CASE WHEN cancel_requested=1 THEN 'Cancelled' ELSE 'Finished' END,result_json=?,error=?,owner=NULL,lease_until=NULL,updated_at=? WHERE id=? AND owner=? AND status='running' AND lease_until>?",
+      )
+      .run(
+        error ?? null,
+        JSON.stringify(result),
+        error ?? null,
+        Date.now(),
+        id,
+        owner,
+        Date.now(),
+      );
+    if (changed.changes) syncTerminalImports();
+  })();
 }
 export function cancel(id: string, userId: string) {
-  db()
-    .prepare(
-      "UPDATE local_jobs SET cancel_requested=1,status=CASE WHEN status='queued' THEN 'cancelled' ELSE status END,updated_at=? WHERE id=? AND created_by=? AND status IN ('queued','running')",
-    )
-    .run(Date.now(), id, userId);
+  db().transaction(() => {
+    const changed = db()
+      .prepare(
+        "UPDATE local_jobs SET cancel_requested=1,status=CASE WHEN status='queued' THEN 'cancelled' ELSE status END,progress=CASE WHEN status='queued' THEN 'Cancelled' ELSE 'Cancelling' END,updated_at=? WHERE id=? AND created_by=? AND status IN ('queued','running')",
+      )
+      .run(Date.now(), id, userId);
+    if (changed.changes) syncTerminalImports();
+  })();
 }

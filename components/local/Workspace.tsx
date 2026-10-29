@@ -28,6 +28,9 @@ import {
 import { type Segment } from "@/lib/local/evidence";
 import { PackageUpload, LocalForm, RefreshJobs, CopyText } from "./Forms";
 import { ImportReportDetails, ImportSourcePreview } from "./ImportDetails";
+import { AccountAttention } from "./AccountAttention";
+import { RequestHistory } from "./RequestHistory";
+import { fmtWhen } from "@/lib/format";
 
 const card = "rounded-lg border border-line bg-surface p-5 space-y-3";
 export function Hidden({ name, value }: { name: string; value: string }) {
@@ -128,6 +131,7 @@ export function LocalOverview({
     <Page user={user}>
       <AccountHeader account={account} tab="overview" />
       <div className="space-y-5">
+        <AccountAttention accountId={account.id} />
         <section className={card}>
           <h2 className="text-lead font-semibold">Account overview</h2>
           <p className="whitespace-pre-wrap">{account.research_summary || "No researched account summary has been accepted yet. Review the imported briefing below or prepare overview and people proposals from an import."}</p>
@@ -275,7 +279,7 @@ export async function ImportPage({ id }: { id: string }) {
       <div className="mt-5 space-y-5">
         <Warnings json={p.warnings_json} />
         {(p.error || j?.error) && <p role="alert">{p.error || j?.error}</p>}
-        {p.state === "failed" && p.created_by === user.id && <LocalForm operation="retry_import" label="Retry import"><Hidden name="packageId" value={id} /></LocalForm>}
+        {["queued", "failed", "cancelled"].includes(p.state) && j && ["failed", "cancelled"].includes(j.status) && p.created_by === user.id && <LocalForm operation="retry_import" label="Retry import"><Hidden name="packageId" value={id} /></LocalForm>}
         {m && <section className={card}>
           <h2 className="text-lead">Package overview</h2>
           <p>As of {m.as_of} · Source namespace: {m.namespace}</p>
@@ -470,7 +474,7 @@ export async function AccountEvidencePage({ id }: { id: string }) {
     .all(id) as { id: string; task: string; status: string }[];
   return (
     <Page user={user}>
-      <AccountHeader account={account} tab="overview" />
+      <AccountHeader account={account} tab="evidence" />
       <div className="space-y-5">
         <section className={card}>
           <h2 className="text-lead">Evidence</h2>
@@ -574,6 +578,7 @@ export async function AccountEvidencePage({ id }: { id: string }) {
             </p>
           ))}
         </section>
+        <RequestHistory accountId={id} userId={user.id} compact />
         <Metrics accountId={id} />
         <section className={card} id="new-account-intake">
           <h2 className="text-lead">
@@ -633,7 +638,7 @@ export async function RequestPage({ id }: { id: string }) {
   const user = await requirePageUser();
   const r = db()
     .prepare("SELECT * FROM local_requests WHERE id=? AND created_by=?")
-    .get(id, user.id) as { prompt: string } | undefined;
+    .get(id, user.id) as { prompt: string; account_id: string; created_at: number } | undefined;
   if (!r) notFound();
   return (
     <Page user={user}>
@@ -642,6 +647,8 @@ export async function RequestPage({ id }: { id: string }) {
         Prepared locally. Give this request to MyAgent, then import its response
         package.
       </p>
+      <p className="text-label mb-3">Prepared {fmtWhen(r.created_at)}. This saved prompt keeps the account details from when it was prepared.</p>
+      <Link className="underline block mb-4" href={`/accounts/${r.account_id}/evidence#saved-requests`}>Return to evidence & MyAgent</Link>
       <div className="flex gap-4">
         <CopyText text={r.prompt} />
         <a

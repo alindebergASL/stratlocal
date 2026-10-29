@@ -112,6 +112,7 @@ try {
     })
     .click();
   await page.waitForURL(/\/requests\//);
+  const savedIntakeUrl = page.url();
   const intakeText = await page.locator("pre").innerText();
   assert.match(intakeText, /Synthetic Local Lab/);
   assert.match(intakeText, /IsClosed=false/);
@@ -133,7 +134,15 @@ try {
   const intakeZipResponse = await page.request.get(`${base}${intakeZipHref}`);
   const intakeZip = await JSZip.loadAsync(await intakeZipResponse.body());
   assert.equal(await intakeZip.file("request.md").async("string"), intakeText);
-  await page.goto(`${base}/accounts/${accountId}/evidence`);
+  await page.getByRole("link", { name: "Return to evidence & MyAgent", exact: true }).click();
+  const requestHistory = page.locator("#saved-requests");
+  await requestHistory.getByRole("heading", { name: "Saved MyAgent requests" }).waitFor();
+  await requestHistory.getByRole("link", { name: "Open saved request", exact: true }).click();
+  await page.waitForURL(savedIntakeUrl);
+  assert.equal(page.url(), savedIntakeUrl);
+  assert.equal(await page.locator("pre").innerText(), intakeText);
+  await page.getByRole("link", { name: "Return to evidence & MyAgent", exact: true }).click();
+  assert.equal(await page.getByRole("navigation", { name: "Account navigation" }).getByRole("link", { name: "Evidence & MyAgent", exact: true }).getAttribute("aria-current"), "page");
   const zip = new JSZip();
   zip.file(
     "manifest.json",
@@ -197,7 +206,10 @@ try {
   await page.getByRole("button", { name: "Confirm account mapping" }).click();
   await page.getByRole("button", { name: "Prepare proposals" }).click();
   await page.waitForURL(/\/inbox/);
-  await page.goto(`${base}/inbox?kind=changes&account=${accountId}`);
+  await page.goto(`${base}/accounts/${accountId}`);
+  await page.getByTestId("account-attention").getByRole("link", { name: /proposed changes to review/ }).click();
+  await page.waitForURL(/\/inbox\?/);
+  assert.equal(new URL(page.url()).searchParams.get("account"), accountId);
   await page.getByTestId("review-as-list").click();
   for (const checkbox of await page.getByLabel(/I understand this is an/).all()) await checkbox.check();
   const batches = page.getByTestId("accept-all");
@@ -207,6 +219,7 @@ try {
   }
   await page.goto(`${base}/accounts/${accountId}`);
   await page.getByRole("heading", { name: "Account overview", exact: true }).waitFor();
+  assert.equal(await page.getByTestId("account-attention").getByRole("link", { name: /proposed changes to review/ }).count(), 0);
   assert.match(await page.locator("body").innerText(), /Synthetic research organization serving local laboratories/);
   await page.goto(`${base}/accounts/${accountId}/people`);
   await page.getByText("Synthetic Customer Director", { exact: true }).first().waitFor();
@@ -292,6 +305,7 @@ try {
     "settings/advanced/external-ai",
     `accounts/${accountId}/plays`,
     `accounts/${accountId}/meetings`,
+    `accounts/${accountId}/requests`,
   ]) {
     const res = await page.goto(`${base}/${route}`);
     assert.equal(res.status(), 200, route);
@@ -307,7 +321,7 @@ try {
   );
   assert.equal(errors.length, 0, errors.join("\n"));
   console.log(
-    "PASS: login → account → new account intake and Markdown/ZIP downloads → package review → linked evidence → MyAgent request → local draft acceptance and account-plan update → meeting notes and discovery question; territory, meetings and disabled external settings render without browser errors.",
+    "PASS: login → account → new account intake and Markdown/ZIP downloads → saved request reopen and active tab → package review → account attention and proposal acceptance → linked evidence → MyAgent request → local draft acceptance and account-plan update → meeting notes and discovery question; request history, territory, meetings and disabled external settings render without browser errors.",
   );
 } catch (e) {
   console.error(

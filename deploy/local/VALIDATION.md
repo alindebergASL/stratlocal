@@ -1,5 +1,12 @@
 # Validation
 
+## Account workflow and import recovery — 2026-10-29
+
+- Production build and TypeScript pass. Seventy-seven focused tests pass across attention cues, request-history account/user scoping and pagination, import recovery, repeat-import conflicts, existing proposal acceptance, contact matching, overview/context, normalization, readiness, and intake.
+- Chromium passes the full synthetic workflow, including reopening the exact saved intake prompt, Markdown/ZIP downloads, current account-tab indication, pending changes reached from Needs attention, acceptance clearing that cue, and the request-history page. Existing evidence, local-model draft, meeting, and disabled-external-AI checks also pass.
+- Recovery tests cover queued/running cancellation, expired leases, the three-interruption limit, legacy stuck packages, original file/job reuse, unauthorized and active-task retry refusal, stale workers, and completed parsing preservation. Repeat-package tests cover overlapping contact/play creates, distinct emails, intervening manual edits, archived/merged records, and separate accounts.
+- Documentation links and diff checks pass. These changes add no migration or environment settings. Tests use synthetic data and temporary databases; Docker Desktop and physical-Mac deployment were not rerun for this update. The build retains the existing dynamic-filesystem tracing warnings in the file-download and exchange-folder paths.
+
 ## Deployment readiness and research coverage — 2026-10-29
 
 - Production build/TypeScript, 38 focused Vitest tests, and six gateway/setup/snapshot Node tests pass. Coverage includes partial versus unknown research coverage, mismatched source identities, changed deal identifiers, explicit distinct-deal confirmation, forwarding request bodies/cookies/Origin, draining a 2 MB download, and backup/restore behavior.

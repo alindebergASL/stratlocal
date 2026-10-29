@@ -14,6 +14,7 @@ Already installed? Follow [update and verify](deploy/local/README.md#update-an-e
 - Explicit account matching, proposal review, and separate questions, hypotheses, and customer confirmations.
 - Optional Ollama and Apple Foundation Models bridge; no automatic external fallback.
 - Durable import/model jobs, local SQLite storage, and backup/restore tools.
+- Account attention cues, saved MyAgent request history, and retries for interrupted imports.
 - Import coverage checks, follow-up requests for research gaps, and review of same-named deals with changed identifiers.
 
 The local Compose installation now includes its browser gateway. Existing installations using the temporary helper must follow [the gateway migration](deploy/local/README.md#migrate-the-temporary-gateway) before starting the new `web` service.

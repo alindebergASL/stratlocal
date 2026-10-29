@@ -18,7 +18,7 @@ import { lifecycle } from "@/lib/playbook/lifecycle";
 // Overview with the few things that matter at a glance, and a tab per kind of
 // record — each its own route, so a tab is a link you can send, the browser's
 // back button works, and the Overview does not pay for lists it does not show.
-export type AccountTab = "overview" | "ask" | "deals" | "plan" | "playbook" | "people" | "meetings" | "follow-ups" | "research" | "details" | "email";
+export type AccountTab = "overview" | "ask" | "deals" | "plan" | "playbook" | "people" | "meetings" | "follow-ups" | "research" | "details" | "email" | "evidence";
 
 type Counts = { deals: number; plays: number; people: number; meetings: number; followUps: number };
 
@@ -48,7 +48,24 @@ export function AccountHeader({ account, tab, actions }: { account: AccountRow; 
   const id = account.id;
   // A merged account lives in the one it went into; its links land there.
   if (account.merged_into) redirect(`/accounts/${account.merged_into}`);
-  if (localOnly()) return <div className="mb-6 space-y-3"><h1 className="font-display text-title font-bold"><Link href={`/accounts/${id}`}>{account.name}</Link></h1><nav aria-label="Account navigation" className="flex flex-wrap gap-4">{[["Overview",""],["Evidence & MyAgent","/evidence"],["Opportunities","/deals"],["Plan","/plays"],["People","/people"],["Meetings","/meetings"],["Follow-ups","/follow-ups"],["Details","/details"]].map(([label,suffix])=><Link key={label} href={`/accounts/${id}${suffix}`}>{label}</Link>)}</nav></div>;
+  if (localOnly()) {
+    const localTabs: { label: string; tab: AccountTab }[] = [
+      { label: "Overview", tab: "overview" },
+      { label: "Evidence & MyAgent", tab: "evidence" },
+      { label: "Opportunities", tab: "deals" },
+      { label: "Plan", tab: "plan" },
+      { label: "People", tab: "people" },
+      { label: "Meetings", tab: "meetings" },
+      { label: "Follow-ups", tab: "follow-ups" },
+      { label: "Details", tab: "details" },
+    ];
+    return <div className="mb-6 space-y-3">
+      <h1 className="font-display text-title font-bold"><Link href={`/accounts/${id}`}>{account.name}</Link></h1>
+      <nav aria-label="Account navigation" className="flex flex-wrap gap-x-4 gap-y-1">
+        {localTabs.map(item => <Link key={item.tab} href={accountTabHref(id, item.tab)} aria-current={tab === item.tab ? "page" : undefined} className={`py-2 border-b-2 ${tab === item.tab ? "border-accent font-semibold" : "border-transparent"}`}>{item.label}</Link>)}
+      </nav>
+    </div>;
+  }
   const n = tabCounts(id);
   const all: Array<{ tab: AccountTab; label: string; count?: number }> = [
     { tab: "overview", label: "Overview" },

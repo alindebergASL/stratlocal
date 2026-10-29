@@ -156,6 +156,8 @@ Repeat the HTTP check in step 5, then refresh the browser. Open an account → *
 
 The account overview now includes general account information and linked research. This update adds a separate researched-summary database column; keep the pre-update backup. For an existing imported package, use **Prepare overview & people proposals** on the overview or import page, then review and accept the proposed customer contacts. Older packages lacking `report.account.summary` show their original briefing but need an updated MyAgent package to populate the accepted summary. Prepare a new intake request for the current summary/contact instructions.
 
+Also verify **Needs attention** appears on the account Overview and **Saved MyAgent requests** appears in Evidence & MyAgent. Reopen the intake request you just prepared and confirm its prompt and downloads remain available. Failed or cancelled imports now offer **Retry import** to their uploader once the task has stopped. These workflow improvements use the existing database tables and require no additional environment settings. See [continuing account work](../../docs/local-workspace.md#continue-work-on-an-account).
+
 ## Migrate the temporary gateway
 
 New installations use the Compose-managed `web` service automatically and do not need a hotfix container. The app stays on an internal-only network; web joins that network and a browser bridge, publishing only `127.0.0.1:3000`. It forwards TCP to the fixed destination `app:3000`, preserving browser headers and streaming uploads. It has no database, original-file volume, or bootstrap secret mounted.

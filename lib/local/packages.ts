@@ -148,12 +148,13 @@ export function retryPackage(id: string, userId: string) {
   return db().transaction(() => {
     const p = packageRow(id);
     if (!p || p.created_by !== userId) throw new Error("Import not found");
-    if (p.state !== "failed") throw new Error("Only failed imports can be retried");
-    const updated = db().prepare("UPDATE local_jobs SET status='queued',attempts=0,error=NULL,result_json=NULL,owner=NULL,lease_until=NULL,cancel_requested=0,progress='Waiting to retry',updated_at=? WHERE request_key=? AND created_by=? AND status='failed'").run(Date.now(), `import:${id}`, userId);
-    if (!updated.changes) throw new Error("Import task is not ready to retry");
+    if (!["queued", "failed", "cancelled"].includes(p.state)) throw new Error("Only failed or cancelled imports can be retried");
+    const now = Date.now();
+    const updated = db().prepare("UPDATE local_jobs SET status='queued',attempts=0,error=NULL,result_json=NULL,owner=NULL,lease_until=NULL,cancel_requested=0,progress='Waiting to retry',updated_at=? WHERE request_key=? AND kind='import' AND created_by=? AND status IN ('failed','cancelled') AND (lease_until IS NULL OR lease_until<=?)").run(now, `import:${id}`, userId, now);
+    if (!updated.changes) throw new Error("Only failed or cancelled imports with no active task can be retried");
     db().prepare("UPDATE local_packages SET state='queued',error=NULL WHERE id=?").run(id);
     return { href: `/imports/${id}`, message: "Original file queued for another import attempt." };
-  })();
+  }).immediate();
 }
 
 export async function parsePackage(
