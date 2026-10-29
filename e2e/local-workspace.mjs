@@ -151,7 +151,8 @@ try {
         {
           key: "lab",
           report: {
-            account: { name: "Synthetic Local Lab" },
+            account: { name: "Synthetic Local Lab", summary: "Synthetic research organization serving local laboratories.", hq: "Synthetic City" },
+            contacts: [{ name: "Synthetic Customer Director", title: "Research Director", org: "customer" }],
             plays: [
               {
                 title: "Synthetic local opportunity",
@@ -190,13 +191,26 @@ try {
   await page.getByRole("button", { name: "Confirm account mapping" }).click();
   await page.getByRole("button", { name: "Prepare proposals" }).click();
   await page.waitForURL(/\/inbox/);
+  await page.goto(`${base}/inbox?kind=changes&account=${accountId}`);
+  await page.getByTestId("review-as-list").click();
+  for (const checkbox of await page.getByLabel(/I understand this is an/).all()) await checkbox.check();
+  const batches = page.getByTestId("accept-all");
+  for (let i = 0; i < await batches.count(); i++) {
+    await batches.nth(i).click();
+    await page.waitForFunction(index => document.querySelectorAll('[data-testid="accept-all"]')[index]?.textContent?.trim() === "All decided", i);
+  }
+  await page.goto(`${base}/accounts/${accountId}`);
+  await page.getByRole("heading", { name: "Account overview", exact: true }).waitFor();
+  assert.match(await page.locator("body").innerText(), /Synthetic research organization serving local laboratories/);
+  await page.goto(`${base}/accounts/${accountId}/people`);
+  await page.getByText("Synthetic Customer Director", { exact: true }).first().waitFor();
   await page.goto(`${base}/accounts/${accountId}/evidence`);
   await page.getByRole("link", { name: "notes.md", exact: true }).waitFor();
   const request = page
     .locator("form")
     .filter({ has: page.getByRole("button", { name: "Prepare request", exact: true }) });
   await request.locator("textarea").fill("Research the next discovery meeting");
-  await request.locator("input[name=artifactIds]").check();
+  await request.getByLabel("notes.md", { exact: true }).check();
   await request
     .getByRole("button", { name: "Prepare request", exact: true })
     .click();
@@ -214,7 +228,7 @@ try {
   const draft = page
     .locator("form")
     .filter({ has: page.locator("select[name=task]") });
-  await draft.locator("input[name=artifactIds]").check();
+  await draft.getByLabel("notes.md", { exact: true }).check();
   await draft.locator("input[name=model]").fill("synthetic-test");
   await draft.locator("select[name=task]").selectOption("account_plan");
   await draft.getByRole("button", { name: "Preview context" }).click();

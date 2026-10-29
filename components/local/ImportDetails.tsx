@@ -17,6 +17,7 @@ function Fields({ value }: { value: Record<string, unknown> }) {
 
 export function ImportReportDetails({ report }: { report: Record<string, unknown> }) {
   const groups: [string, string][] = [
+    ["contacts", "Customer contacts"],
     ["deals", "Opportunities"], ["team", "Seller team"],
     ["install_base", "Installed base"], ["plays", "Proposed plays"],
   ];
@@ -43,11 +44,11 @@ export function ImportReportDetails({ report }: { report: Record<string, unknown
   </div>;
 }
 
-export function ImportSourcePreview({ name, source }: { name: string; source: Artifact }) {
+export function ImportSourcePreview({ name, source, open = false }: { name: string; source: Artifact; open?: boolean }) {
   const segments = JSON.parse(source.segments_json) as Segment[];
   const full = segments.map(s => `${s.label} (${s.locator})\n${s.text}`).join("\n\n");
   const limit = 12000;
-  return <details className="rounded border border-line p-3">
+  return <details open={open} className="rounded border border-line p-3">
     <summary className="cursor-pointer">{name} · {segments.length} extracted sections · {source.byte_size.toLocaleString()} bytes</summary>
     <p className="my-2"><Link className="underline" href={`/evidence/${source.id}`}>Open source and all extracted sections</Link>{" · "}
       <a className="underline" href={`/api/local/files/${source.id}`}>Download original</a></p>

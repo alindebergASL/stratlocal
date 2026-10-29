@@ -15,6 +15,12 @@ Complete [base Mac setup](../deploy/local/README.md) first. The steps below desc
 
 ## New account intake request
 
+The account **Overview** now separates general account information from your account plan. Accepted `report.account.summary` appears as the researched overview, with legal entity, headquarters, region, segment, and CRM identifier. Linked briefing/research files are shown directly on the overview, with the newest preview open. Research remains source-attributed material, not customer-confirmed answers.
+
+Customer people belong in `report.contacts`; `report.team` remains the internal seller team. Preparing proposals includes customer-contact and overview proposals; accept them in **Review changes** to populate People and the account overview. For previously imported packages, use **Prepare overview & people proposals** on the account overview or import page. This also recognizes `contacts` or `stakeholders_and_executives` arrays in identity-matched JSON evidence (including first_name/last_name). It does not infer people from free text, arbitrary nested structures, or seller-team records. Ambiguous/merged/cross-side matches, invalid fields, and conflicting titles produce import warnings; existing populated contact fields remain unchanged. Repeating preparation does not duplicate pending or accepted changes, and rejected identical proposals stay rejected.
+
+Older files without `report.account.summary` still display their briefing as research, but need a new package with that field to populate the accepted overview. New requests include that field's instructions and a customer contacts array. Existing prompts and originals are not rewritten. This update adds an account-summary database column; take the documented backup before rebuilding.
+
 At the bottom of an account’s **Evidence & MyAgent** page, use **Prepare a MyAgent request for new account intake**. It works before you have imported evidence. The request uses the saved account name and CRM ID; you can add an optional website, research focus, selected originals, and exchange-folder delivery.
 
 Select **Prepare new account intake request** to review a complete Salesforce-plus-web prompt covering active opportunities, stakeholders, activities, commercial history, public priorities, technology/procurement research, engagement hypotheses, and meeting preparation. The prompt specifies the compatible response ZIP format and keeps unsupported CRM fields in evidence rather than inventing mappings.

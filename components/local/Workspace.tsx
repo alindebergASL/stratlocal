@@ -121,10 +121,34 @@ export function LocalOverview({
     opportunities: number;
     meetings: number;
   };
+  const research = db().prepare("SELECT DISTINCT a.* FROM local_artifacts a JOIN local_artifact_links l ON l.artifact_id=a.id WHERE l.account_id=? AND (lower(a.filename) LIKE '%brief%' OR lower(a.filename) LIKE '%research%') ORDER BY a.created_at DESC LIMIT 6").all(account.id) as Artifact[];
+  const packages = db().prepare("SELECT p.id,p.filename FROM local_packages p JOIN local_account_mappings m ON m.package_id=p.id WHERE m.account_id=? AND p.state='proposed' ORDER BY p.created_at DESC LIMIT 5").all(account.id) as {id: string; filename: string}[];
   return (
     <Page user={user}>
       <AccountHeader account={account} tab="overview" />
       <div className="space-y-5">
+        <section className={card}>
+          <h2 className="text-lead font-semibold">Account overview</h2>
+          <p className="whitespace-pre-wrap">{account.research_summary || "No researched account summary has been accepted yet. Review the imported briefing below or prepare overview and people proposals from an import."}</p>
+          <dl className="grid gap-3 sm:grid-cols-2">
+            {[["Legal entity", account.legal_entity], ["Headquarters", account.hq], ["Region", account.region], ["Segment", account.segment], ["CRM identifier", account.crm_id]].map(([label, value]) => <div key={label}><dt className="font-semibold">{label}</dt><dd>{value || "Not supplied"}</dd></div>)}
+          </dl>
+          <p className="text-label">The overview describes the organization. The account plan below records your strategy. Imported research is not a customer-confirmed answer.</p>
+          <Link className="underline" href={`/accounts/${account.id}/people`}>Open customer people and seller team</Link>
+        </section>
+        {!!research.length && <section className={card}>
+          <h2 className="text-lead">Imported account research</h2>
+          <p>Source briefings and research, including any unverified or conflicting claims. Newer imports appear first.</p>
+          {research.map((source, i) => <ImportSourcePreview key={source.id} name={source.filename} source={source} open={i === 0} />)}
+        </section>}
+        {!!packages.length && <section className={card}>
+          <h2 className="text-lead">Update overview and people from imports</h2>
+          <p>For older imports, prepare additional proposals here, then accept or reject them in Review changes. Only supported, identity-matched customer-contact fields are proposed.</p>
+          {packages.map(p => <div key={p.id}>
+            <Link className="underline" href={`/imports/${p.id}`}>{p.filename}</Link>
+            <LocalForm operation="propose_account_context" label="Prepare overview & people proposals"><Hidden name="packageId" value={p.id} /></LocalForm>
+          </div>)}
+        </section>}
         <section className={card}>
           <h2 className="text-lead font-semibold">Account plan</h2>
           <p className="whitespace-pre-wrap">
@@ -331,6 +355,9 @@ export async function ImportPage({ id }: { id: string }) {
             <LocalForm operation="propose_package" label="Prepare proposals">
               <Hidden name="packageId" value={id} />
             </LocalForm>
+            {p.state === "proposed" && <LocalForm operation="propose_account_context" label="Prepare overview & people proposals">
+              <Hidden name="packageId" value={id} />
+            </LocalForm>}
             <Link className="underline" href="/accounts">
               Create or review accounts
             </Link>

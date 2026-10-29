@@ -1292,6 +1292,7 @@ const MIGRATIONS: Migration[] = [
     },
   },
   { id: "048_local_workspace", up: (conn) => { conn.exec(LOCAL_SCHEMA); } },
+  { id: "049_account_research_summary", up: (conn) => { conn.exec("ALTER TABLE accounts ADD COLUMN research_summary TEXT"); } },
 ];
 
 // Migration 020_contact_merge_pointer's backfill, named so it can be tested on its own. Pairs a
@@ -1456,6 +1457,7 @@ export type UserRow = {
 export type SessionRow = { id: string; user_id: string; created_at: number; expires_at: number };
 
 export type AccountRow = {
+  research_summary?: string | null;
   archived_at?: string | null;
   id: string;
   name: string;

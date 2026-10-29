@@ -1,4 +1,5 @@
 import { intakeManifest, intakePrompt } from "./intake";
+import { contextDrafts, contextSources } from "./accountContext";
 import fs from "node:fs";
 import path from "node:path";
 import { createHash } from "node:crypto";
@@ -268,11 +269,11 @@ export async function parsePackage(
     if (a.crm_id != null && typeof a.crm_id !== "string")
       throw new Error("CRM identifiers must be strings");
     const extracted = jsonExtraction(JSON.stringify(item.report), a.name);
-    if (!extracted)
+    if (!extracted && !Array.isArray(item.report.contacts) && !(a as { summary?: unknown }).summary)
       warnings.push(
         `Account ${item.key}: no supported structured records; retained as reference evidence only.`,
       );
-    else
+    else if (extracted)
       warnings.push(
         ...extracted.dropped.map((d) => `Account ${item.key}: skipped ${d}`),
       );
@@ -477,6 +478,7 @@ export function proposePackage(id: string, userId: string) {
         ).ids.length;
       }
     }
+    count += proposeAccountContext(id, userId).proposals;
     let territoryId: string | null = null;
     if (m.territory) {
       const prior = db()
@@ -521,6 +523,40 @@ export function proposePackage(id: string, userId: string) {
     return { proposals: count };
   })();
 }
+// Explicit refresh for packages imported before overview/customer-contact support.
+// It only prepares additional proposals; accepted/rejected rows retain normal dedupe.
+export function proposeAccountContext(id: string, userId: string) {
+  const p = packageRow(id);
+  if (!p?.manifest_json || !["review", "proposed"].includes(p.state)) throw new Error("Package not ready");
+  const m = PackageManifest.parse(JSON.parse(p.manifest_json));
+  const paths = JSON.parse(p.artifacts_json) as Record<string, string>;
+  return db().transaction(() => {
+    let proposals = 0;
+    const warnings: string[] = JSON.parse(p.warnings_json);
+    for (const item of m.accounts) {
+      const mapping = db().prepare("SELECT account_id,alias_approved FROM local_account_mappings WHERE package_id=? AND source_key=?").get(id, item.key) as { account_id: string; alias_approved: number } | undefined;
+      if (!mapping) throw new Error(`Resolve account ${item.key} first`);
+      const account = getAccount(mapping.account_id);
+      if (!account || account.archived_at) throw new Error("Mapped account is unavailable");
+      const identity = item.report.account as { name: string; crm_id?: string };
+      const other = identity.crm_id ? db().prepare("SELECT name FROM accounts WHERE trim(crm_id)=? AND id!=?").get(identity.crm_id.trim(), account.id) as { name: string } | undefined : undefined;
+      assertImportAccountIdentity({ name: mapping.alias_approved ? account.name : identity.name, crm_id: identity.crm_id ?? null, legal_entity: null, region: null, segment: null, hq: null, summary: null }, account, other?.name);
+      const path = item.sources[0]?.path ?? "manifest.json";
+      const link = db().prepare("SELECT document_id FROM local_artifact_links WHERE artifact_id=? AND account_id=? AND meeting_id=''").get(paths[path] ?? "", account.id) as { document_id: string } | undefined;
+      if (!link) throw new Error("Prepare proposals first to link the package evidence");
+      // The manifest itself is the exact source of structured overview/contacts.
+      const manifestId = paths["manifest.json"];
+      const reportDocument = manifestId && ((item.report.account as { summary?: unknown }).summary || (Array.isArray(item.report.contacts) && item.report.contacts.length))
+        ? linkArtifact(manifestId, account.id, userId, "", "internal") : link.document_id;
+      const result = contextDrafts(item.report, contextSources(paths, item.sources, account.id), account, listContacts(account.id, { includeArchived: true }), { kind: "document", id: reportDocument });
+      warnings.push(...result.warnings);
+      proposals += createProposalBatch(account.id, { kind: "import", id, aiRunId: null }, result.drafts, { deduplicatePending: true }).ids.length;
+    }
+    db().prepare("UPDATE local_packages SET warnings_json=? WHERE id=?").run(JSON.stringify([...new Set(warnings)]), id);
+    return { proposals };
+  })();
+}
+
 export async function prepareRequest(
   accountId: string,
   question: string,

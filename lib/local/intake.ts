@@ -31,6 +31,7 @@ export function intakeManifest(
             ...(account.crm_id ? { crm_id: account.crm_id } : {}),
           },
           team: [],
+          contacts: [],
           deals: [],
           install_base: [],
           plays: [],
@@ -78,7 +79,7 @@ Use the supplied Salesforce Account ID when available; otherwise compare name, w
 
 Preserve my exact StrategyLocal account name and the verified Salesforce Account ID as account.crm_id. Record Salesforce's account name, website, parent relationship, and record URL in the evidence. Flag discrepancies rather than silently changing names. Ask me to resolve a supplied ID that identifies a different organization.
 
-Identify the actual connector and source system. A SAVM ID, warehouse key, or connector alias is not automatically a Salesforce Account ID. Native Salesforce record IDs have 15 or 18 alphanumeric characters; retrieve the actual IDs and URLs instead of constructing them from descriptive slugs. Preserve alternate identifiers with their system and field names in the evidence. If genuine record IDs cannot be retrieved, report the limitation and omit unsupported structured records rather than inventing identifiers.
+Identify the actual connector and source system. An alternate account identifier, warehouse key, or connector alias is not automatically a Salesforce Account ID. Native Salesforce record IDs have 15 or 18 alphanumeric characters; retrieve the actual IDs and URLs instead of constructing them from descriptive slugs. Preserve alternate identifiers with their system and field names in the evidence. If genuine record IDs cannot be retrieved, report the limitation and omit unsupported structured records rather than inventing identifiers.
 
 If Salesforce access is unavailable, stop and explain the missing connection or export needed. Do not substitute web research for CRM facts. If the web connector fails, report it and ask whether I want a Salesforce-only package rather than presenting the research as complete.
 
@@ -138,6 +139,8 @@ Create an internal briefing containing:
 ### Account overview
 Identity, responsibilities, ownership, organizational context, documented priorities, and important recent developments.
 
+Make this a useful starting account profile: official website, mission and services, industry/sector, geography and headquarters, scale with sourced dates (employees, enrollment, facilities or service population as appropriate), parent/business-unit structure, leadership, financial/funding context, current strategic priorities, technology landscape, procurement process, and recent material developments. Clearly distinguish central organization, subsidiaries, and healthcare entities. Put a concise factual overview in report.account.summary (maximum 4,000 characters); keep the detailed assessment and citations in account-brief.md. Do not turn the general overview into a product pitch or overwrite it with a sales strategy.
+
 ### Opportunity-by-opportunity review
 For each active opportunity: what Salesforce records, stakeholders, activity, recorded next steps, public context where relevant, stale information, risks, gaps, overdue dates, and questions to validate assumptions. Identify whether connections to public initiatives are verified or hypothesized. Do not manufacture a relationship between a public initiative and a deal.
 
@@ -175,7 +178,8 @@ The evidence files retain the full findings; extra JSON fields do not automatica
 ### Account
 - name: exact StrategyLocal name supplied above.
 - crm_id: verified Salesforce Account ID; do not invent an ID if none was supplied.
-- summary: concise evidence-backed overview. Other supported account fields only when their meaning is unambiguous.
+- summary: evidence-backed general account profile (maximum 4,000 characters), including the official website as text when verified. The app proposes this as the separate researched account overview, not the account plan.
+- legal_entity, region, segment, hq: populate supported factual values when sourced; omit unknown values. Do not add new root manifest fields for this information.
 
 ### report.deals: active Salesforce opportunities only
 - deal_id: Salesforce Opportunity ID; name: Opportunity Name.
@@ -187,7 +191,9 @@ The evidence files retain the full findings; extra JSON fields do not automatica
 
 Keep Amount, currency, probability, forecast category, opportunity NextStep, activities, and unsupported fields in the evidence. Do not interpret absence from an active-only export as permission to close or delete an existing local deal.
 
-Keep report.team empty: this field represents the seller team, not customer contacts. Preserve customer contacts and opportunity roles in the evidence.
+Keep report.team empty: this field represents the seller team, not customer contacts.
+
+Populate report.contacts for sourced customer people so StrategyLocal can prepare People proposals. Each row uses name (required), title, email (only a verified business address), org: "customer", role (executive, it_leader, technical, procurement, or other only when supported; otherwise omit), and notes. Optional organization, department, contact_id, record_url, relationship, and last_interaction strings are retained in contact notes. Keep individual fields under 400 characters and combined notes under 4,000 characters. Preserve source IDs, actual record URLs, exact organizational affiliations, conflicting titles, and evidence limitations in salesforce-records.json as well. Do not infer buying authority from a title; a proposed champion is not a confirmed champion. Do not place internal sellers or partners in report.contacts. Return an empty contacts array only when no supported customer people can be supplied and explain the coverage limitation.
 
 Keep report.install_base empty: preserve assets, subscriptions, contracts, and products in the evidence rather than forcing incompatible records into that structure.
 

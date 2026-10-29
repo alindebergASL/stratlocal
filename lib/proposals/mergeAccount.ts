@@ -40,7 +40,7 @@ const CHILDREN: Array<{ entity: MovableEntity; table: string; key: string; label
   { entity: "document", table: "documents", key: "id", label: "filename", noun: ["document", "documents"] },
   { entity: "ask_thread", table: "ask_threads", key: "id", label: "title", noun: ["conversation", "conversations"] },
 ];
-const FILLABLE = ["crm_id", "legal_entity", "region", "segment", "hq", "thesis", "owner_user_id"] as const;
+const FILLABLE = ["crm_id", "legal_entity", "region", "segment", "hq", "thesis", "research_summary", "owner_user_id"] as const;
 
 type AccountReceipt = {
   moved: Array<[MovableEntity, string]>;
@@ -103,6 +103,7 @@ export function planAccountMerge(conn: Conn, keeperId: string, loserId: string):
     if (theirs === null || theirs === "") continue;
     if (mine === null || mine === "") fills.push({ field: f, value: theirs as Value });
     else if (f === "thesis" && mine !== theirs) notCarried.push(`The account thesis of “${loser.name}”: “${keeper.name}” has its own`);
+    else if (f === "research_summary" && mine !== theirs) notCarried.push(`The researched overview of “${loser.name}”: “${keeper.name}” has its own`);
   }
   const names = (id: string) => conn.prepare(`SELECT name FROM contacts WHERE account_id = ? AND archived_at IS NULL`).pluck().all(id) as string[];
   const mine = new Set(names(keeperId).map((n) => n.trim().toLowerCase()));

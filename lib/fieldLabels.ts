@@ -1,6 +1,7 @@
 import { QUALIFICATION_LABELS } from "./playbook/qualificationFields";
 // Presentation only: stored audit fields and values are never rewritten.
 const FIELD_LABELS: Record<string, string> = {
+  research_summary: "Researched account overview",
   owner_user_id: "Assigned owner", owner: "Owner", raw_notes: "Meeting notes",
   held_at: "Meeting date", held_time: "Meeting time", summary: "Summary",
   tcv_usd: "Deal value", close_date: "Close date", next_step: "Next step",

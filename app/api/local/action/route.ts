@@ -12,6 +12,7 @@ import { localSettings, saveLocalSettings, artifact } from "@/lib/local/store";
 import {
   resolveAccount,
   proposePackage,
+  proposeAccountContext,
   prepareRequest,
 } from "@/lib/local/packages";
 import {
@@ -58,6 +59,9 @@ export async function POST(req: NextRequest) {
             flag("alias"),
             user.id,
           );
+          break;
+        case "propose_account_context":
+          result = { ...proposeAccountContext(text("packageId", 100), user.id), message: "Overview and customer-contact proposals are ready for review.", href: "/inbox?kind=changes" };
           break;
         case "propose_package":
           result = {

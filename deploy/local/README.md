@@ -149,6 +149,8 @@ If models or the exchange folder are enabled, use [your complete optional Compos
 
 Repeat the HTTP check in step 5, then refresh the browser. Open an account → **Evidence & MyAgent** and scroll to the bottom. Expect **Prepare a MyAgent request for new account intake**. Prepare a request without selecting evidence and verify **Download prompt (.md)** appears on its review page. This prepares files locally; it does not contact MyAgent or Salesforce. Follow [the intake instructions](../../docs/local-workspace.md#new-account-intake-request) for the complete handoff and import.
 
+The account overview now includes general account information and linked research. This update adds a separate researched-summary database column; keep the pre-update backup. For an existing imported package, use **Prepare overview & people proposals** on the overview or import page, then review and accept the proposed customer contacts. Older packages lacking `report.account.summary` show their original briefing but need an updated MyAgent package to populate the accepted summary. Prepare a new intake request for the current summary/contact instructions.
+
 ## Browser connection workaround
 
 Some Docker engines do not publish the app's port from its internal-only network. The base Compose file still uses that network. This temporary fixed-destination TCP gateway is the workaround used by the current installation; it is not yet part of Compose.

@@ -76,6 +76,7 @@ export type SourceRef = z.infer<typeof SourceRef>;
 
 export const AccountPatch = z
   .object({
+    research_summary: text.nullable(),
     name: short.min(1),
     crm_id: nullableShort,
     legal_entity: nullableShort,

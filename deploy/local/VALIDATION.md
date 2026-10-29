@@ -1,5 +1,12 @@
 # Validation
 
+## Account overview and customer contacts
+
+- Production build/TypeScript and 50 focused tests pass, covering overview/contact proposals, accepted persistence, repeat preparation, legacy JSON contact recovery, source-account mismatches, seller/customer separation, conflicting titles, existing imports, and account merge behavior.
+- Chromium acceptance verifies accepting imported account metadata, a researched overview, and a customer contact; the overview and People page show the accepted data. The existing request, model, and meeting workflow also passes.
+- Migration `049_account_research_summary` adds a nullable summary column separate from the account thesis. Exact structured-summary/contact provenance is retained through the imported manifest; legacy contact proposals cite their JSON evidence.
+- Validation uses temporary databases and synthetic regression fixtures. Neither MyAgent/Salesforce access nor the truth of imported claims is established by these checks.
+
 ## Expanded import review and intake depth
 
 - Production build, TypeScript, and 27 focused import-detail/intake/workspace tests pass. Rendering checks cover readable deal fields, missing-data labels, escaped source markup, and bounded source previews with original-file links.
