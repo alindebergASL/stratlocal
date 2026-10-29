@@ -1,5 +1,11 @@
 # Validation
 
+## Expanded import review and intake depth
+
+- Production build, TypeScript, and 27 focused import-detail/intake/workspace tests pass. Rendering checks cover readable deal fields, missing-data labels, escaped source markup, and bounded source previews with original-file links.
+- Chromium acceptance passes, including opening an imported source preview and inspecting its original-download link before proposal creation.
+- Both the in-app intake prompt and standalone Markdown template request broader account research and explicit retrieval coverage. Actual MyAgent research quality and connector access still require source review; these tests do not verify external claims.
+
 ## Intake and installation documentation update — 2026-10-28
 
 - Intake implementation (`383f39d`): TypeScript, production build, and 24 focused intake/workspace tests passed. The Chromium workflow also passed intake preparation on an empty account, Markdown and ZIP download checks, and the existing import/planning flow. Salesforce and MyAgent were not called; preparation is local.

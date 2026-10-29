@@ -181,6 +181,12 @@ try {
   await page
     .getByRole("button", { name: "Confirm account mapping" })
     .waitFor({ timeout: 20000 });
+  await page.getByRole("heading", { name: "Package overview" }).waitFor();
+  await page.getByRole("heading", { name: "Research, stakeholders & source detail" }).waitFor();
+  const preview = page.locator("details").filter({ has: page.locator("summary", { hasText: "sources/notes.md" }) });
+  await preview.locator("summary").click();
+  assert.match(await preview.innerText(), /Synthetic customer evidence/);
+  await preview.getByRole("link", { name: "Download original", exact: true }).waitFor();
   await page.getByRole("button", { name: "Confirm account mapping" }).click();
   await page.getByRole("button", { name: "Prepare proposals" }).click();
   await page.waitForURL(/\/inbox/);

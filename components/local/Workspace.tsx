@@ -26,6 +26,7 @@ import {
 } from "@/lib/local/models";
 import { type Segment } from "@/lib/local/evidence";
 import { PackageUpload, LocalForm, RefreshJobs, CopyText } from "./Forms";
+import { ImportReportDetails, ImportSourcePreview } from "./ImportDetails";
 
 const card = "rounded-lg border border-line bg-surface p-5 space-y-3";
 export function Hidden({ name, value }: { name: string; value: string }) {
@@ -249,6 +250,12 @@ export async function ImportPage({ id }: { id: string }) {
       <div className="mt-5 space-y-5">
         <Warnings json={p.warnings_json} />
         {(p.error || j?.error) && <p role="alert">{p.error || j?.error}</p>}
+        {m && <section className={card}>
+          <h2 className="text-lead">Package overview</h2>
+          <p>As of {m.as_of} · Source namespace: {m.namespace}</p>
+          <p>{m.accounts.length} accounts · {m.artifacts.length} declared evidence files · {m.metrics.length} metric observations</p>
+          <p>Review the account records and evidence below. Successful parsing confirms the file format, not the accuracy or completeness of the research.</p>
+        </section>}
         <section className={card}>
           <h2 className="text-lead">Originals & source locations</h2>
           {Object.entries(paths).map(([name, aid]) => (
@@ -295,6 +302,7 @@ export async function ImportPage({ id }: { id: string }) {
                   Conflicting CRM IDs remain blocked.
                 </label>
               </LocalForm>
+              <ImportReportDetails report={a.report} />
               <details>
                 <summary>Reported account data</summary>
                 <pre className="overflow-auto whitespace-pre-wrap text-micro">
@@ -304,6 +312,14 @@ export async function ImportPage({ id }: { id: string }) {
             </section>
           );
         })}
+        {m && <section className={card}>
+          <h2 className="text-lead">Research, stakeholders & source detail</h2>
+          <p>Expand a file to read the supplied briefing, stakeholder information, activity history, research, and limitations. These previews display source content without accepting changes.</p>
+          {Object.entries(paths).filter(([name]) => name !== "manifest.json").map(([name, aid]) => {
+            const source = artifact(aid);
+            return source ? <ImportSourcePreview key={name} name={name} source={source} /> : null;
+          })}
+        </section>}
         {m && (
           <section className={card}>
             <h2 className="text-lead">Prepare changes for review</h2>
