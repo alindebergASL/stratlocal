@@ -6,12 +6,12 @@ This is a personal local workspace, not a cloud deployment or a clone of all ups
 
 Complete [base Mac setup](../deploy/local/README.md) first. The steps below describe the current local UI; model drafting is optional and requires the separate model checks.
 
-1. Create/select an account. Open **Evidence & MyAgent** and import reference files or a MyAgent package.
+1. Create/select an account. If you need initial research, start with [new account intake](#new-account-intake-request) below; existing evidence is not required. If you already have reference files or a MyAgent package, open **Evidence & MyAgent** and import them.
 2. In **Imports & tasks**, inspect the originals, extraction warnings, and account identities. Choose a target account explicitly for uncertain matches. Approving a name alias never overrides a conflicting CRM ID.
 3. **Prepare proposals** links the sources and territory snapshot. Accept/reject account changes in **Review changes**. Accept/reject metric observations on the package page. Neither import nor model execution accepts account changes automatically.
 4. Prepare a MyAgent request: enter the research question and select sources. Copy the prompt, download the request ZIP, or write it to the exchange folder. Hand it to MyAgent yourself, then import the response.
 5. Create a meeting from the account. Select its evidence and meeting when drafting a brief. Capture meeting notes and follow-up actions. Proposed questions, hypotheses, and customer-confirmed answers are separate records; confirmations require speaker, time, and an exact source quotation.
-6. Review a local model draft, edit it, and accept it. Accepting an account-plan draft explicitly replaces the account thesis. Other accepted drafts remain saved text for copying into notes/actions; nothing is sent or scheduled.
+6. Optionally, with a configured local model, review a model draft, edit it, and accept it. Accepting an account-plan draft explicitly replaces the account thesis. Other accepted drafts remain saved text for copying into notes/actions; nothing is sent or scheduled.
 
 ## New account intake request
 
@@ -21,7 +21,16 @@ Select **Prepare new account intake request** to review a complete Salesforce-pl
 
 On the request page, use **Copy request**, **Download prompt (.md)**, or **Download request & selected originals**. Give the result to MyAgent yourself; preparing it does not call Salesforce, MyAgent, or an AI provider. Import MyAgent’s returned ZIP into the account and review its mappings and proposals. Correct the saved name/CRM ID under Account Details before preparing a request if they identify the wrong organization.
 
-A standalone [Markdown prompt template](MyAgent_StrategyLocal_Account_Package_Prompt.md) is also available; replace its account-name placeholder before use. The in-app request automatically fills that identity and embeds its matching manifest template.
+For your first intake:
+
+1. Check the saved account identity, then open **Evidence & MyAgent** and scroll to the bottom intake section. If it is missing, follow [update an existing installation](../deploy/local/README.md#update-an-existing-installation).
+2. Optionally enter the account website and additional research focus. Leave evidence unselected for an empty account. Leave exchange-folder delivery unchecked unless you have configured that option.
+3. Select **Prepare new account intake request**. Review the generated account name, CRM ID, and research scope.
+4. Copy the request or download its Markdown file. If you selected originals, download the request ZIP to include them. Give the prompt and relevant files to MyAgent in a session with authorized Salesforce and web connectors. StrategyLocal itself does not need those connector credentials.
+5. Ask MyAgent to follow the prompt and return the ZIP containing root `manifest.json` and the referenced evidence files. The prompt requests active deals plus web research; it requires MyAgent to report missing access, incomplete searches, and ambiguous account matches. Resolve those gaps before treating the package as complete. A text description of a ZIP is not a downloadable package.
+6. Return to the same account and import the actual response ZIP. Review account mappings, extraction warnings, sources, and proposed changes before accepting them. Retain the distinction between customer-confirmed evidence and proposed questions or hypotheses.
+
+A standalone [Markdown prompt template](MyAgent_StrategyLocal_Account_Package_Prompt.md) is also available. Replace every account-name placeholder; supply the Salesforce account ID only if verified, and have MyAgent use the actual retrieval date in the returned manifest. The in-app request automatically fills the saved identity and embeds its matching manifest template.
 
 ## Package contract (version 1)
 

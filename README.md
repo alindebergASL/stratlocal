@@ -4,6 +4,8 @@ A personal local account-planning workspace for macOS. MyAgent supplies research
 
 **Start here: [Mac container setup](deploy/local/README.md) · [Workspace and model guide](docs/local-workspace.md)**
 
+Already installed? Follow [update and verify](deploy/local/README.md#update-an-existing-installation). For an empty account, use [new account intake](docs/local-workspace.md#new-account-intake-request) to prepare one MyAgent request for Salesforce active deals and web research, with Markdown or ZIP download.
+
 **Bedrock is not required. External AI is off by default**, with optional per-task use under Settings → Advanced. Accounts, imports, source review, meetings, and manual planning work without any AI provider.
 
 - Account-centered navigation, territory snapshots, and separate sourced metric observations.

@@ -1,5 +1,12 @@
 # Validation
 
+## Intake and installation documentation update — 2026-10-28
+
+- Intake implementation (`383f39d`): TypeScript, production build, and 24 focused intake/workspace tests passed. The Chromium workflow also passed intake preparation on an empty account, Markdown and ZIP download checks, and the existing import/planning flow. Salesforce and MyAgent were not called; preparation is local.
+- Reproduce focused tests with `npm test -- tests/localIntake.test.ts tests/localWorkspace.test.ts` on Node 22. The browser test still requires a production build and Chromium.
+- Installation instructions now distinguish container health from host HTTP reachability, document the existing temporary gateway, preserve that gateway during upgrades, and flag the same port-publication limitation for restore trials. The gateway is not integrated into the tracked Compose configuration.
+- This documentation update checks commands and UI labels against tracked files; it does not constitute a new Docker Desktop or physical-Mac acceptance run.
+
 ## Setup-guide audit — 2026-10-28
 
 - Checked the instructions against the tracked scripts, schema, UI, Dockerfile, and Compose files. Removed stale foundation-only instructions and unconfigured development-server fallback advice.
