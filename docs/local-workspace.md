@@ -19,6 +19,20 @@ The **Needs attention** panel on an account's Overview links to pending changes,
 
 In **Evidence & MyAgent**, **Saved MyAgent requests** shows your five most recent requests for that account. Use **Open saved request** to read or copy the full prompt and download its original ZIP; Markdown downloads are also available in the list. **View all saved requests** appears when there are more than five, with pages of twenty. The history includes only requests prepared by your signed-in user. Preparing or downloading a request does not establish that it was sent to MyAgent. Saved prompts keep the account details they were prepared with; create a new request after changing the account identity or research scope.
 
+## Meeting evidence and customer confirmations
+
+To attach an imported original to a meeting, open its evidence page, choose **Target account**, then choose **Meeting (optional)** and select **Link original**. The meeting picker lists only active meetings for that account and clears when you change accounts. Leave the meeting empty to link account evidence only. Saved meeting links appear beside the linked account.
+
+On a meeting, expand **Discovery questions & customer confirmations**. A **Proposed question** or **Hypothesis** can be saved without source attribution; neither becomes a customer-confirmed answer automatically. To record something the customer actually confirmed:
+
+1. Select **Customer-confirmed answer**, enter the question, answer, and speaker.
+2. Choose **Confirmation time** in your browser's timezone, which the form displays. The app saves a timestamp with a timezone; saved records display the app timezone beside their time. Invalid dates and nonexistent daylight-saving times are rejected.
+3. Choose **Source file**, then its **Page, slide, or section**. Only evidence already linked to this account is offered. The source preview loads locally; no model or external service is called. If there are more than 100 readable locations, use **More locations** or **Previous locations**.
+4. Copy an exact quotation into **Exact source quotation**, up to 1,000 characters. A passage preview shows up to 12,000 characters; **Open full source in a new tab** opens the complete extracted location and original-download link. Changing the file or location clears the quotation. Unreadable files require a readable transcript or replacement source before they can support a confirmation.
+5. Select **Save discovery record**. The server checks the account, active meeting, source membership, timestamp, and exact quotation. A saved answer shows its quotation and **Inspect confirmation source** link. The form resets after a successful save.
+
+These checks establish where the quotation came from, not whether its author was correct or the customer actually confirmed it. That classification remains your explicit choice. Stale forms cannot add records or evidence links to archived or merged accounts/meetings.
+
 ## New account intake request
 
 The account **Overview** now separates general account information from your account plan. Accepted `report.account.summary` appears as the researched overview, with legal entity, headquarters, region, segment, and CRM identifier. Linked briefing/research files are shown directly on the overview, with the newest preview open. Research remains source-attributed material, not customer-confirmed answers.

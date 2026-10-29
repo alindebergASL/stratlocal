@@ -8,7 +8,7 @@ import { db, DOCS_DIR } from "@/lib/db";
 import { newId } from "@/lib/ids";
 import { applyEntityChange } from "@/lib/proposals/apply";
 import { sameOrigin, boundedBody } from "@/lib/local/http";
-import { localSettings, saveLocalSettings, artifact } from "@/lib/local/store";
+import { localSettings, saveLocalSettings } from "@/lib/local/store";
 import {
   resolveAccount,
   proposePackage,
@@ -26,7 +26,8 @@ import {
 } from "@/lib/local/models";
 import { cancel } from "@/lib/local/queue";
 import { exchangeRoot } from "@/lib/local/worker";
-import { linkArtifact, type Segment } from "@/lib/local/evidence";
+import { linkArtifact } from "@/lib/local/evidence";
+import { saveDiscoveryRecord } from "@/lib/local/discovery";
 
 export const runtime = "nodejs";
 export async function POST(req: NextRequest) {
@@ -252,73 +253,8 @@ export async function POST(req: NextRequest) {
           );
           break;
         case "confirmation": {
-          const accountId = text("accountId", 100),
-            meetingId = text("meetingId", 100),
-            question = text("question"),
-            state = z
-              .enum(["question", "hypothesis", "confirmed"])
-              .parse(b.state);
-          if (
-            !question ||
-            !db()
-              .prepare("SELECT 1 FROM meetings WHERE id=? AND account_id=?")
-              .get(meetingId, accountId)
-          )
-            throw new Error("A question and an account meeting are required");
-          const answer = text("answer"),
-            speaker = text("speaker", 200),
-            confirmedAt = text("confirmedAt", 60),
-            artifactId = text("artifactId", 100),
-            locator = text("locator", 120),
-            quote = text("quote", 1000);
-          if (state === "confirmed") {
-            if (
-              !answer ||
-              !speaker ||
-              !confirmedAt ||
-              !Number.isFinite(Date.parse(confirmedAt)) ||
-              !quote
-            )
-              throw new Error(
-                "A confirmation needs an answer, speaker, time, and source quotation",
-              );
-            if (
-              !db()
-                .prepare(
-                  "SELECT 1 FROM local_artifact_links WHERE artifact_id=? AND account_id=?",
-                )
-                .get(artifactId, accountId)
-            )
-              throw new Error("Source does not belong to this account");
-            const a = artifact(artifactId)!;
-            if (
-              !(JSON.parse(a.segments_json) as Segment[]).some(
-                (s) => s.locator === locator && s.text.includes(quote),
-              )
-            )
-              throw new Error(
-                "Quotation does not match the selected source location",
-              );
-          }
-          db()
-            .prepare(
-              "INSERT INTO local_confirmations VALUES(?,?,?,?,?,?,?,?,?,?,?)",
-            )
-            .run(
-              newId(),
-              accountId,
-              meetingId,
-              question,
-              answer || null,
-              state === "confirmed" ? speaker : null,
-              state === "confirmed" ? confirmedAt : null,
-              state === "confirmed"
-                ? JSON.stringify({ artifactId, locator, quote })
-                : null,
-              state,
-              user.id,
-              Date.now(),
-            );
+          const id = saveDiscoveryRecord(b, user.id);
+          result = { id, message: "Discovery record saved." };
           break;
         }
         default:

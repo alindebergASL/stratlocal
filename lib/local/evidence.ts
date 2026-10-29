@@ -241,13 +241,7 @@ export function linkArtifact(
   labels: string[] = [],
 ) {
   return db().transaction(() => {
-    if (
-      meetingId &&
-      !db()
-        .prepare("SELECT 1 FROM meetings WHERE id=? AND account_id=?")
-        .get(meetingId, accountId)
-    )
-      throw new Error("Meeting does not belong to this account");
+    assertActiveEvidenceTarget(accountId, meetingId);
     const existing = db()
       .prepare(
         "SELECT document_id FROM local_artifact_links WHERE artifact_id=? AND account_id=? AND meeting_id=?",
@@ -307,4 +301,12 @@ export function linkArtifact(
       );
     return documentId;
   })();
+}
+
+/** Recheck saved state when a form is submitted; a picker can become stale. */
+export function assertActiveEvidenceTarget(accountId: string, meetingId = "") {
+  if (!db().prepare("SELECT 1 FROM accounts WHERE id=? AND archived_at IS NULL AND merged_into IS NULL").get(accountId))
+    throw new Error("Choose an active account; this account is missing, archived, or merged.");
+  if (meetingId && !db().prepare("SELECT 1 FROM meetings WHERE id=? AND account_id=? AND archived_at IS NULL AND merged_into IS NULL").get(meetingId, accountId))
+    throw new Error("Choose an active meeting belonging to this account; the selected meeting may have been archived or merged.");
 }

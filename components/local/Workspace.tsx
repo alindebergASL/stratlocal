@@ -30,7 +30,10 @@ import { PackageUpload, LocalForm, RefreshJobs, CopyText } from "./Forms";
 import { ImportReportDetails, ImportSourcePreview } from "./ImportDetails";
 import { AccountAttention } from "./AccountAttention";
 import { RequestHistory } from "./RequestHistory";
+import { EvidenceLinkForm } from "./EvidenceLinkForm";
+import { DiscoveryForm } from "./DiscoveryForm";
 import { fmtWhen } from "@/lib/format";
+import { appTimeZone } from "@/lib/clock";
 
 const card = "rounded-lg border border-line bg-surface p-5 space-y-3";
 export function Hidden({ name, value }: { name: string; value: string }) {
@@ -396,14 +399,17 @@ export async function EvidencePage({ id }: { id: string }) {
   if (!a) notFound();
   const links = db()
     .prepare(
-      "SELECT l.*,a.name FROM local_artifact_links l JOIN accounts a ON a.id=l.account_id WHERE artifact_id=?",
+      "SELECT l.*,a.name,m.title meeting_title FROM local_artifact_links l JOIN accounts a ON a.id=l.account_id LEFT JOIN meetings m ON m.id=l.meeting_id AND m.account_id=l.account_id WHERE artifact_id=?",
     )
     .all(id) as {
     account_id: string;
     name: string;
     audience: string;
     author_labels_json: string;
+    meeting_id: string;
+    meeting_title: string | null;
   }[];
+  const meetingChoices = db().prepare("SELECT m.id,m.account_id,m.title,m.held_at FROM meetings m JOIN accounts a ON a.id=m.account_id WHERE m.archived_at IS NULL AND m.merged_into IS NULL AND a.archived_at IS NULL AND a.merged_into IS NULL AND a.kind='customer' ORDER BY m.held_at DESC,m.title").all() as { id: string; account_id: string; title: string; held_at: string }[];
   return (
     <Page user={user}>
       <h1 className="text-title font-bold">{a.filename}</h1>
@@ -423,20 +429,14 @@ export async function EvidencePage({ id }: { id: string }) {
               · audience: {l.audience} · author labels:{" "}
               {(JSON.parse(l.author_labels_json) as string[]).join(", ") ||
                 "none"}
+              {l.meeting_title && <> · Meeting: <Link className="underline" href={`/accounts/${l.account_id}/meetings/${l.meeting_id}`}>{l.meeting_title}</Link></>}
             </p>
           ))}
           <p className="text-label">
             Audience and evidence labels are author-supplied classifications,
             not independent verification.
           </p>
-          <LocalForm operation="link_evidence" label="Link original">
-            <Hidden name="artifactId" value={id} />
-            <AccountSelect />
-            <label>
-              Meeting ID (optional)
-              <input className={field} name="meetingId" />
-            </label>
-          </LocalForm>
+          <EvidenceLinkForm artifactId={id} accounts={accounts()} meetings={meetingChoices} />
         </section>
         {(JSON.parse(a.segments_json) as Segment[]).map((s) => (
           <section className={card} id={s.locator} key={s.locator}>
@@ -926,69 +926,46 @@ export function Confirmations({
 }) {
   const rows = db()
     .prepare(
-      "SELECT * FROM local_confirmations WHERE meeting_id=? ORDER BY created_at",
+      "SELECT * FROM local_confirmations WHERE meeting_id=? AND account_id=? ORDER BY created_at",
     )
-    .all(meetingId) as {
+    .all(meetingId, accountId) as {
     id: string;
     state: string;
     question: string;
     answer: string | null;
     speaker: string | null;
     confirmed_at: string | null;
+    source_json: string | null;
   }[];
+  const sources = (db().prepare("SELECT DISTINCT a.id,a.filename,a.created_at FROM local_artifacts a JOIN local_artifact_links l ON l.artifact_id=a.id WHERE l.account_id=? ORDER BY a.created_at DESC,a.filename").all(accountId) as { id: string; filename: string; created_at: number }[]).map(source => ({ id: source.id, filename: source.filename, added: fmtWhen(source.created_at) }));
   return (
     <details>
       <summary>Discovery questions & customer confirmations</summary>
       <div className="space-y-3 mt-3">
-        {rows.map((r) => (
+        {rows.map((r) => {
+          let source: { artifactId: string; locator: string; quote: string } | null = null;
+          try {
+            const value = JSON.parse(r.source_json || "null");
+            if (value && typeof value.artifactId === "string" && typeof value.locator === "string" && typeof value.quote === "string") source = value;
+          } catch { /* Preserve older records even if their citation is unreadable. */ }
+          return (
           <article key={r.id}>
             <p className="font-semibold">
-              {r.state} · {r.question}
+              {{ question: "Proposed question", hypothesis: "Hypothesis", confirmed: "Customer-confirmed answer" }[r.state] || r.state} · {r.question}
             </p>
             <p>{r.answer}</p>
             {r.speaker && (
               <p>
-                {r.speaker} · {r.confirmed_at}
+                {r.speaker} · {r.confirmed_at && Number.isFinite(Date.parse(r.confirmed_at)) ? `${fmtWhen(Date.parse(r.confirmed_at))} (${appTimeZone()})` : r.confirmed_at}
               </p>
             )}
+            {r.state === "confirmed" && source && <div className="mt-2 space-y-2">
+              <blockquote className="border-l-2 border-line pl-3 whitespace-pre-wrap">{source.quote}</blockquote>
+              <Link className="underline" href={`/evidence/${encodeURIComponent(source.artifactId)}#${encodeURIComponent(source.locator)}`}>Inspect confirmation source</Link>
+            </div>}
           </article>
-        ))}
-        <LocalForm operation="confirmation" label="Save discovery record">
-          <Hidden name="accountId" value={accountId} />
-          <Hidden name="meetingId" value={meetingId} />
-          <label>
-            Record type
-            <select className={field} name="state">
-              <option value="question">Proposed question</option>
-              <option value="hypothesis">Hypothesis</option>
-              <option value="confirmed">Customer-confirmed answer</option>
-            </select>
-          </label>
-          <label>
-            Question
-            <input className={field} name="question" required />
-          </label>
-          <label>
-            Answer / hypothesis
-            <textarea className={field} name="answer" />
-          </label>
-          <p>
-            Confirmed answers require speaker, time, and an exact quotation from
-            an imported source.
-          </p>
-          {[
-            ["speaker", "Speaker"],
-            ["confirmedAt", "Confirmation time (ISO date/time)"],
-            ["artifactId", "Source artifact ID (from evidence URL)"],
-            ["locator", "Source location (e.g. section:1)"],
-            ["quote", "Exact source quotation"],
-          ].map(([name, label]) => (
-            <label className="block" key={name}>
-              {label}
-              <input className={field} name={name} />
-            </label>
-          ))}
-        </LocalForm>
+        ); })}
+        <DiscoveryForm key={`${accountId}:${meetingId}:${rows.length}`} accountId={accountId} meetingId={meetingId} sources={sources} />
       </div>
     </details>
   );

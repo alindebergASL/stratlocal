@@ -158,6 +158,8 @@ The account overview now includes general account information and linked researc
 
 Also verify **Needs attention** appears on the account Overview and **Saved MyAgent requests** appears in Evidence & MyAgent. Reopen the intake request you just prepared and confirm its prompt and downloads remain available. Failed or cancelled imports now offer **Retry import** to their uploader once the task has stopped. These workflow improvements use the existing database tables and require no additional environment settings. See [continuing account work](../../docs/local-workspace.md#continue-work-on-an-account).
 
+For the meeting workflow, open an imported original and verify the account and meeting dropdowns under **Link original**. On a test meeting, expand **Discovery questions & customer confirmations** and select **Customer-confirmed answer** to check the source-file and location selectors. Existing questions and confirmations remain available. This update requires no additional migration or configuration; follow [the meeting evidence instructions](../../docs/local-workspace.md#meeting-evidence-and-customer-confirmations).
+
 ## Migrate the temporary gateway
 
 New installations use the Compose-managed `web` service automatically and do not need a hotfix container. The app stays on an internal-only network; web joins that network and a browser bridge, publishing only `127.0.0.1:3000`. It forwards TCP to the fixed destination `app:3000`, preserving browser headers and streaming uploads. It has no database, original-file volume, or bootstrap secret mounted.

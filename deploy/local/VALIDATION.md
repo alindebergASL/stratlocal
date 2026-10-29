@@ -1,5 +1,11 @@
 # Validation
 
+## Meeting evidence and confirmations — 2026-10-29
+
+- Production build and TypeScript pass. Forty-nine focused tests pass across discovery records, source selection, browser-local timestamp conversion, existing imports/context, duplicate protection, and intake. Cases include source-account membership, exact quotation/location checks, archived or merged targets, preserved question/hypothesis classifications, offset timestamps, invalid dates and daylight-saving gaps, bounded previews, and paginated locations.
+- Chromium passes the complete synthetic workflow. New checks select evidence by filename and section, preview the passage, reject a mismatched quotation without saving a confirmation, clear quotations on location changes, save a valid answer with a source link, reset the discovery form, and attach the original using account/meeting dropdowns. A source-preview request for an unlinked account returns 404. Existing intake, request history, proposal, model, and external-AI-disabled checks also pass.
+- Documentation links and diff checks pass. No migration or additional configuration is needed. Validation uses synthetic data on Linux; this update does not establish the truth of imported claims or constitute a physical-Mac deployment test. The existing dynamic-filesystem tracing build warnings remain.
+
 ## Account workflow and import recovery — 2026-10-29
 
 - Production build and TypeScript pass. Seventy-seven focused tests pass across attention cues, request-history account/user scoping and pagination, import recovery, repeat-import conflicts, existing proposal acceptance, contact matching, overview/context, normalization, readiness, and intake.

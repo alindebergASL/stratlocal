@@ -180,7 +180,7 @@ try {
       ],
     }),
   );
-  zip.file("sources/notes.md", "# Preparation\nSynthetic customer evidence");
+  zip.file("sources/notes.md", "# Preparation\nSynthetic customer evidence\n# Customer discussion\nSynthetic customer confirmed the next step.");
   await page.locator("input[type=file]").setInputFiles({
     name: "myagent.zip",
     mimeType: "application/zip",
@@ -281,6 +281,8 @@ try {
     .getByRole("button", { name: "Create meeting", exact: true })
     .click();
   await page.waitForURL(/\/meetings\/[^/]+$/);
+  const meetingUrl = page.url();
+  const meetingId = new URL(meetingUrl).pathname.split("/").at(-1);
   await page
     .locator("textarea[name=raw_notes]")
     .fill("Synthetic customer confirmed the next step.");
@@ -295,8 +297,47 @@ try {
   await page.locator("input[name=question]").fill("Who owns the decision?");
   await page.getByRole("button", { name: "Save discovery record" }).click();
   await page
-    .getByText("question · Who owns the decision?", { exact: true })
+    .getByText("Proposed question · Who owns the decision?", { exact: true })
     .waitFor();
+  const discovery = page.locator("form").filter({ has: page.getByRole("button", { name: "Save discovery record", exact: true }) });
+  await discovery.getByRole("combobox", { name: "Record type", exact: true }).selectOption("confirmed");
+  await discovery.getByLabel("Question", { exact: true }).fill("Was the next step confirmed?");
+  await discovery.getByLabel("Answer / hypothesis", { exact: true }).fill("The customer confirmed the next step.");
+  await discovery.getByLabel("Speaker", { exact: true }).fill("Synthetic Customer");
+  await discovery.getByLabel("Confirmation time", { exact: true }).fill("2026-10-29T10:30");
+  const sourceSelect = discovery.getByRole("combobox", { name: "Source file", exact: true });
+  const sourceId = await sourceSelect.locator("option").filter({ hasText: /^notes\.md ·/ }).getAttribute("value");
+  await sourceSelect.selectOption(sourceId);
+  const locationSelect = discovery.getByRole("combobox", { name: "Page, slide, or section", exact: true });
+  await locationSelect.selectOption({ label: "Customer discussion · section:2" });
+  await page.getByTestId("source-passage").waitFor();
+  assert.match(await page.getByTestId("source-passage").innerText(), /Synthetic customer confirmed the next step/);
+  await discovery.getByLabel("Exact source quotation", { exact: true }).fill("Synthetic customer approved all funding.");
+  await discovery.getByRole("button", { name: "Save discovery record" }).click();
+  await discovery.getByText("Quotation does not match the selected source location", { exact: true }).waitFor();
+  assert.equal(await page.getByRole("link", { name: "Inspect confirmation source", exact: true }).count(), 0);
+  await locationSelect.selectOption({ label: "Preparation · section:1" });
+  assert.equal(await discovery.getByLabel("Exact source quotation", { exact: true }).inputValue(), "");
+  await locationSelect.selectOption({ label: "Customer discussion · section:2" });
+  await page.getByTestId("source-passage").waitFor();
+  assert.match(await page.getByTestId("source-passage").innerText(), /Synthetic customer confirmed the next step/);
+  await discovery.getByLabel("Exact source quotation", { exact: true }).fill("Synthetic customer confirmed the next step.");
+  await discovery.getByRole("button", { name: "Save discovery record" }).click();
+  await page.getByText("Customer-confirmed answer · Was the next step confirmed?", { exact: true }).waitFor();
+  assert.equal(await discovery.getByRole("combobox", { name: "Record type", exact: true }).inputValue(), "question");
+  await page.getByRole("link", { name: "Inspect confirmation source", exact: true }).click();
+  await page.waitForURL(/\/evidence\//);
+  const linkOriginal = page.locator("form").filter({ has: page.getByRole("button", { name: "Link original", exact: true }) });
+  await linkOriginal.getByRole("combobox", { name: "Target account", exact: true }).selectOption(accountId);
+  await linkOriginal.getByRole("combobox", { name: "Meeting (optional)", exact: true }).selectOption(meetingId);
+  await linkOriginal.getByRole("combobox", { name: "Target account", exact: true }).selectOption("");
+  assert.equal(await linkOriginal.getByRole("combobox", { name: "Meeting (optional)", exact: true }).inputValue(), "");
+  await linkOriginal.getByRole("combobox", { name: "Target account", exact: true }).selectOption(accountId);
+  await linkOriginal.getByRole("combobox", { name: "Meeting (optional)", exact: true }).selectOption(meetingId);
+  await linkOriginal.getByRole("button", { name: "Link original", exact: true }).click();
+  await page.getByRole("link", { name: "Synthetic discovery meeting", exact: true }).waitFor();
+  const foreignPreview = await page.request.get(`${base}/api/local/evidence/${sourceId}?accountId=unlinked-synthetic-account&locator=section%3A2`);
+  assert.equal(foreignPreview.status(), 404);
   for (const route of [
     "territory",
     "meetings",
@@ -321,7 +362,7 @@ try {
   );
   assert.equal(errors.length, 0, errors.join("\n"));
   console.log(
-    "PASS: login → account → new account intake and Markdown/ZIP downloads → saved request reopen and active tab → package review → account attention and proposal acceptance → linked evidence → MyAgent request → local draft acceptance and account-plan update → meeting notes and discovery question; request history, territory, meetings and disabled external settings render without browser errors.",
+    "PASS: login → account → intake/downloads → saved requests → package review and attention → linked evidence → MyAgent request → local draft → meeting notes, question, source picker, rejected mismatched quote and saved confirmation → meeting evidence link; source scope, request history and disabled external settings verified.",
   );
 } catch (e) {
   console.error(
