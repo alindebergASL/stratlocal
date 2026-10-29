@@ -13,6 +13,16 @@ Complete [base Mac setup](../deploy/local/README.md) first. The steps below desc
 5. Create a meeting from the account. Select its evidence and meeting when drafting a brief. Capture meeting notes and follow-up actions. Proposed questions, hypotheses, and customer-confirmed answers are separate records; confirmations require speaker, time, and an exact source quotation.
 6. Review a local model draft, edit it, and accept it. Accepting an account-plan draft explicitly replaces the account thesis. Other accepted drafts remain saved text for copying into notes/actions; nothing is sent or scheduled.
 
+## New account intake request
+
+At the bottom of an account’s **Evidence & MyAgent** page, use **Prepare a MyAgent request for new account intake**. It works before you have imported evidence. The request uses the saved account name and CRM ID; you can add an optional website, research focus, selected originals, and exchange-folder delivery.
+
+Select **Prepare new account intake request** to review a complete Salesforce-plus-web prompt covering active opportunities, stakeholders, activities, commercial history, public priorities, technology/procurement research, engagement hypotheses, and meeting preparation. The prompt specifies the compatible response ZIP format and keeps unsupported CRM fields in evidence rather than inventing mappings.
+
+On the request page, use **Copy request**, **Download prompt (.md)**, or **Download request & selected originals**. Give the result to MyAgent yourself; preparing it does not call Salesforce, MyAgent, or an AI provider. Import MyAgent’s returned ZIP into the account and review its mappings and proposals. Correct the saved name/CRM ID under Account Details before preparing a request if they identify the wrong organization.
+
+A standalone [Markdown prompt template](MyAgent_StrategyLocal_Account_Package_Prompt.md) is also available; replace its account-name placeholder before use. The in-app request automatically fills that identity and embeds its matching manifest template.
+
 ## Package contract (version 1)
 
 A ZIP contains root `manifest.json` and source files at the paths it names. JSON-only single-account reports also work. PDF, PPTX, DOCX, HTML, Markdown, and text originals can be imported as reference evidence. PPTX extraction includes slide order and speaker notes; PDF extraction cites pages. OCR and full deck generation are not included.

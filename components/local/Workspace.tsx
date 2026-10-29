@@ -514,6 +514,56 @@ export async function AccountEvidencePage({ id }: { id: string }) {
           ))}
         </section>
         <Metrics accountId={id} />
+        <section className={card} id="new-account-intake">
+          <h2 className="text-lead">
+            Prepare a MyAgent request for new account intake
+          </h2>
+          <p>
+            Prepare a complete Salesforce and web research request: active
+            deals, stakeholders, recent activity, priorities, technology and
+            procurement, engagement hypotheses, and meeting preparation.
+          </p>
+          <p>
+            Account: <strong>{account.name}</strong> · Salesforce account ID:{" "}
+            {account.crm_id ||
+              "Not saved — MyAgent must resolve and verify the account"}
+          </p>
+          <p className="text-label">
+            Works without existing evidence. Review the generated prompt, then
+            copy it or download Markdown or a request ZIP. Nothing is sent
+            automatically and no account records are changed.
+          </p>
+          <LocalForm
+            operation="prepare_intake_request"
+            label="Prepare new account intake request"
+          >
+            <Hidden name="accountId" value={id} />
+            <label className="block">
+              Account website (optional)
+              <input
+                className={field}
+                type="url"
+                name="website"
+                maxLength={500}
+                placeholder="https://example.org"
+              />
+            </label>
+            <label className="block">
+              Additional research focus (optional)
+              <textarea
+                className={field}
+                name="question"
+                maxLength={8000}
+                placeholder="Specific business units, initiatives, or questions to prioritize"
+              />
+            </label>
+            <EvidenceChoices accountId={id} />
+            <label className="block">
+              <input type="checkbox" name="writeFolder" /> Also write to the
+              configured exchange folder
+            </label>
+          </LocalForm>
+        </section>
       </div>
     </Page>
   );
@@ -533,6 +583,12 @@ export async function RequestPage({ id }: { id: string }) {
       </p>
       <div className="flex gap-4">
         <CopyText text={r.prompt} />
+        <a
+          className="underline"
+          href={`/api/local/files/${id}?format=markdown`}
+        >
+          Download prompt (.md)
+        </a>
         <a className="underline" href={`/api/local/files/${id}`}>
           Download request & selected originals
         </a>

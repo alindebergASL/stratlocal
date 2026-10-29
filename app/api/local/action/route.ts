@@ -122,13 +122,18 @@ export async function POST(req: NextRequest) {
           };
           break;
         }
+        case "prepare_intake_request":
         case "prepare_request": {
           const prepared = await prepareRequest(
             text("accountId", 100),
             text("question", 8000),
             ids("artifactIds"),
             user.id,
+            b.operation === "prepare_intake_request"
+              ? { website: text("website", 500) }
+              : undefined,
           );
+          fs.mkdirSync(DOCS_DIR, { recursive: true });
           fs.writeFileSync(
             path.join(DOCS_DIR, `request-${prepared.id}.zip`),
             prepared.bytes,

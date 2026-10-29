@@ -15,8 +15,26 @@ export async function GET(
       { id } = await ctx.params;
     const a = artifact(id);
     const request = db()
-      .prepare("SELECT id FROM local_requests WHERE id=? AND created_by=?")
-      .get(id, user.id) as { id: string } | undefined;
+      .prepare(
+        "SELECT id,prompt FROM local_requests WHERE id=? AND created_by=?",
+      )
+      .get(id, user.id) as { id: string; prompt: string } | undefined;
+    if (req.nextUrl.searchParams.get("format") === "markdown") {
+      if (!request)
+        return NextResponse.json(
+          { error: "Request not found" },
+          { status: 404 },
+        );
+      return new NextResponse(request.prompt, {
+        headers: {
+          "content-type": "text/markdown; charset=utf-8",
+          "content-disposition": `attachment; filename="myagent-request-${request.id}.md"`,
+          "x-content-type-options": "nosniff",
+          "cache-control": "no-store",
+          "content-security-policy": "sandbox",
+        },
+      });
+    }
     if (!a && !request)
       return NextResponse.json({ error: "File not found" }, { status: 404 });
     const file =

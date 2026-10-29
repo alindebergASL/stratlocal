@@ -14,14 +14,29 @@ const log = fs.openSync(path.join(temp, "server.log"), "w");
 const mockToken = "synthetic-local-test-token-01234567890123456789";
 const modelBridge = http.createServer(async (req, res) => {
   assert.equal(req.headers.authorization, `Bearer ${mockToken}`);
-  const chunks=[]; for await (const c of req) chunks.push(c);
-  res.setHeader("content-type","application/json");
-  if(req.url==="/v1/capabilities") return res.end(JSON.stringify({providers:[{id:"ollama",available:true,models:["synthetic-test"]}],externalEnabled:false}));
-  const b=JSON.parse(Buffer.concat(chunks).toString());
-  assert.equal(b.provider,"ollama"); assert.equal(b.externalApproved,false);
-  res.end(JSON.stringify({text:"Synthetic reviewed plan based on evidence [S1]",model:"synthetic-test"}));
+  const chunks = [];
+  for await (const c of req) chunks.push(c);
+  res.setHeader("content-type", "application/json");
+  if (req.url === "/v1/capabilities")
+    return res.end(
+      JSON.stringify({
+        providers: [
+          { id: "ollama", available: true, models: ["synthetic-test"] },
+        ],
+        externalEnabled: false,
+      }),
+    );
+  const b = JSON.parse(Buffer.concat(chunks).toString());
+  assert.equal(b.provider, "ollama");
+  assert.equal(b.externalApproved, false);
+  res.end(
+    JSON.stringify({
+      text: "Synthetic reviewed plan based on evidence [S1]",
+      model: "synthetic-test",
+    }),
+  );
 });
-await new Promise(r=>modelBridge.listen(0,"127.0.0.1",r));
+await new Promise((r) => modelBridge.listen(0, "127.0.0.1", r));
 const server = spawn(
   process.execPath,
   ["node_modules/next/dist/bin/next", "start", "-p", port, "-H", "127.0.0.1"],
@@ -81,6 +96,44 @@ try {
     .getByRole("link", { name: "Evidence & MyAgent", exact: true })
     .click();
   await page.waitForURL(/\/evidence$/);
+  const intake = page.locator("#new-account-intake");
+  assert.equal(
+    await page.locator("main section").last().getAttribute("id"),
+    "new-account-intake",
+  );
+  await intake.locator("input[name=website]").fill("https://example.org");
+  await intake
+    .locator("textarea[name=question]")
+    .fill("Prioritize budget and procurement research");
+  await intake
+    .getByRole("button", {
+      name: "Prepare new account intake request",
+      exact: true,
+    })
+    .click();
+  await page.waitForURL(/\/requests\//);
+  const intakeText = await page.locator("pre").innerText();
+  assert.match(intakeText, /Synthetic Local Lab/);
+  assert.match(intakeText, /IsClosed=false/);
+  assert.match(intakeText, /Conduct web research/);
+  assert.match(intakeText, /Prioritize budget and procurement research/);
+  const markdownHref = await page
+    .getByRole("link", { name: "Download prompt (.md)", exact: true })
+    .getAttribute("href");
+  const markdown = await page.request.get(`${base}${markdownHref}`);
+  assert.equal(markdown.status(), 200);
+  assert.match(markdown.headers()["content-type"], /text\/markdown/);
+  assert.equal(await markdown.text(), intakeText);
+  const intakeZipHref = await page
+    .getByRole("link", {
+      name: "Download request & selected originals",
+      exact: true,
+    })
+    .getAttribute("href");
+  const intakeZipResponse = await page.request.get(`${base}${intakeZipHref}`);
+  const intakeZip = await JSZip.loadAsync(await intakeZipResponse.body());
+  assert.equal(await intakeZip.file("request.md").async("string"), intakeText);
+  await page.goto(`${base}/accounts/${accountId}/evidence`);
   const zip = new JSZip();
   zip.file(
     "manifest.json",
@@ -118,13 +171,11 @@ try {
     }),
   );
   zip.file("sources/notes.md", "# Preparation\nSynthetic customer evidence");
-  await page
-    .locator("input[type=file]")
-    .setInputFiles({
-      name: "myagent.zip",
-      mimeType: "application/zip",
-      buffer: await zip.generateAsync({ type: "nodebuffer" }),
-    });
+  await page.locator("input[type=file]").setInputFiles({
+    name: "myagent.zip",
+    mimeType: "application/zip",
+    buffer: await zip.generateAsync({ type: "nodebuffer" }),
+  });
   await page.getByRole("button", { name: "Import for review" }).click();
   await page.waitForURL(/\/imports\//);
   await page
@@ -137,7 +188,7 @@ try {
   await page.getByRole("link", { name: "notes.md", exact: true }).waitFor();
   const request = page
     .locator("form")
-    .filter({ has: page.locator("textarea[name=question]") });
+    .filter({ has: page.getByRole("button", { name: "Prepare request", exact: true }) });
   await request.locator("textarea").fill("Research the next discovery meeting");
   await request.locator("input[name=artifactIds]").check();
   await request
@@ -167,25 +218,46 @@ try {
     /Synthetic customer evidence/,
   );
   assert.equal(await page.locator("input[name=externalApproved]").count(), 0);
-  await page.getByRole("button",{name:"Run this task"}).click();
+  await page.getByRole("button", { name: "Run this task" }).click();
   await page.waitForURL(/\/imports\?job=/);
-  await page.getByRole("link",{name:"Review draft",exact:true}).waitFor({timeout:20000});
-  await page.getByRole("link",{name:"Review draft",exact:true}).click();
-  await page.getByRole("button",{name:"Accept and update account thesis"}).click();
-  await page.getByText("Original generated text",{exact:true}).waitFor();
+  await page
+    .getByRole("link", { name: "Review draft", exact: true })
+    .waitFor({ timeout: 20000 });
+  await page.getByRole("link", { name: "Review draft", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Accept and update account thesis" })
+    .click();
+  await page.getByText("Original generated text", { exact: true }).waitFor();
   await page.goto(`${base}/accounts/${accountId}`);
-  assert.match(await page.locator("body").innerText(),/Synthetic reviewed plan/);
+  assert.match(
+    await page.locator("body").innerText(),
+    /Synthetic reviewed plan/,
+  );
   await page.goto(`${base}/accounts/${accountId}/meetings`);
-  await page.getByRole("button",{name:"New meeting",exact:true}).click();
-  await page.locator('[data-testid=meeting-new] input[name=title]').fill("Synthetic discovery meeting");
-  await page.getByRole("button",{name:"Create meeting",exact:true}).click();
+  await page.getByRole("button", { name: "New meeting", exact: true }).click();
+  await page
+    .locator("[data-testid=meeting-new] input[name=title]")
+    .fill("Synthetic discovery meeting");
+  await page
+    .getByRole("button", { name: "Create meeting", exact: true })
+    .click();
   await page.waitForURL(/\/meetings\/[^/]+$/);
-  await page.locator('textarea[name=raw_notes]').fill("Synthetic customer confirmed the next step.");
-  await page.locator('form').filter({has:page.locator('textarea[name=raw_notes]')}).getByRole('button',{name:'Save',exact:true}).click();
-  await page.getByText('Discovery questions & customer confirmations',{exact:true}).click();
-  await page.locator('input[name=question]').fill('Who owns the decision?');
-  await page.getByRole('button',{name:'Save discovery record'}).click();
-  await page.getByText('question · Who owns the decision?',{exact:true}).waitFor();
+  await page
+    .locator("textarea[name=raw_notes]")
+    .fill("Synthetic customer confirmed the next step.");
+  await page
+    .locator("form")
+    .filter({ has: page.locator("textarea[name=raw_notes]") })
+    .getByRole("button", { name: "Save", exact: true })
+    .click();
+  await page
+    .getByText("Discovery questions & customer confirmations", { exact: true })
+    .click();
+  await page.locator("input[name=question]").fill("Who owns the decision?");
+  await page.getByRole("button", { name: "Save discovery record" }).click();
+  await page
+    .getByText("question · Who owns the decision?", { exact: true })
+    .waitFor();
   for (const route of [
     "territory",
     "meetings",
@@ -209,7 +281,7 @@ try {
   );
   assert.equal(errors.length, 0, errors.join("\n"));
   console.log(
-    "PASS: login → account → package review → linked evidence → MyAgent request → local draft acceptance and account-plan update → meeting notes and discovery question; territory, meetings and disabled external settings render without browser errors.",
+    "PASS: login → account → new account intake and Markdown/ZIP downloads → package review → linked evidence → MyAgent request → local draft acceptance and account-plan update → meeting notes and discovery question; territory, meetings and disabled external settings render without browser errors.",
   );
 } catch (e) {
   console.error(
@@ -221,7 +293,7 @@ try {
   server.kill("SIGTERM");
   if (server.exitCode === null)
     await new Promise((r) => server.once("exit", r));
-  await new Promise(r=>modelBridge.close(r));
+  await new Promise((r) => modelBridge.close(r));
   fs.closeSync(log);
   fs.rmSync(temp, { recursive: true, force: true });
 }
